@@ -1,0 +1,34 @@
+# dependencies
+/node_modules
+
+# next.js
+/.next/
+/.next-*/
+/out/
+/build
+next-env.d.ts
+
+# generated
+/src/generated
+/prisma/generated
+
+# misc
+.DS_Store
+*.pem
+npm-debug.log*
+*.tsbuildinfo
+
+# env files — these hold the key that decrypts platform credentials and
+# patient identifiers
+.env
+.env*.local
+.env.production
+
+# Archives. An env.zip holding a backup copy of .env would otherwise be
+# committable by `git add -A`.
+*.zip
+
+# The development database (npm run db:start) and server-side dumps.
+/.pgdata
+/.storage
+/backups

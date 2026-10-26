@@ -1,0 +1,90 @@
+@import "tailwindcss";
+
+/*
+ * Class names are collected from the source only. Build output is compiled
+ * code, not markup: scanning it finds things that merely look like classes,
+ * and one of those is enough to break the stylesheet.
+ */
+@source not "../../.next-verify";
+@source not "../../.next-build";
+@source not "../../.storage";
+@source not "../../.pgdata";
+
+/*
+ * Design tokens, taken from the Manufacturing Management System design
+ * (docs/design-source). Names describe the role a colour plays, so a screen
+ * reads as "muted text on a subtle surface" rather than as a list of hexes.
+ */
+@theme {
+  --font-sans: var(--font-plex-sans), system-ui, sans-serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, monospace;
+  --font-display: var(--font-space-grotesk), var(--font-plex-sans), sans-serif;
+
+  /* Text */
+  --color-ink: #101828;
+  --color-ink-2: #344054;
+  --color-ink-3: #475467;
+  --color-muted: #667085;
+  --color-faint: #98a2b3;
+
+  /* Surfaces and lines */
+  --color-canvas: #f7f8fa;
+  --color-subtle: #f9fafb;
+  --color-chip: #f2f4f7;
+  --color-line: #e4e7ec;
+  --color-line-2: #eaecf0;
+  --color-line-3: #f2f4f7;
+  --color-field: #d0d5dd;
+
+  /* Brand */
+  --color-brand: #e24e1b;
+  --color-brand-ink: #c4320a;
+  --color-brand-tint: #fff1eb;
+  --color-brand-wash: #fff6f2;
+  --color-brand-edge: #f97066;
+  --color-brand-glow: #ff8a5c;
+
+  /* Dark chrome */
+  --color-navy: #0c1524;
+  --color-navy-muted: #8391a5;
+  --color-navy-text: #a5b2c4;
+
+  /* Status */
+  --color-ok: #067647;
+  --color-ok-tint: #ecfdf3;
+  --color-bad: #b42318;
+  --color-bad-tint: #fef3f2;
+  --color-warn: #b54708;
+  --color-warn-tint: #fffaeb;
+  --color-info: #175cd3;
+  --color-info-tint: #eff8ff;
+
+  --shadow-popover: 0 12px 34px rgba(16, 24, 40, 0.16);
+  --shadow-modal: 0 24px 48px rgba(16, 24, 40, 0.25);
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  color: var(--color-ink);
+  background: var(--color-canvas);
+}
+
+button:not(:disabled),
+[role="tab"] {
+  cursor: pointer;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-brand);
+  outline-offset: 2px;
+}
+
+input[type="checkbox"] {
+  accent-color: var(--color-brand);
+}

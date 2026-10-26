@@ -1,0 +1,2 @@
+# Keep LF line endings on every machine, whatever core.autocrlf says.
+* text=auto eol=lf

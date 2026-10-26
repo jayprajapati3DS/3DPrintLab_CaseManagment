@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Sign in</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600&amp;family=IBM+Plex+Sans:wght@400;500;600&amp;family=IBM+Plex+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;font-family:'IBM Plex Sans',system-ui,sans-serif;background:#F6F4EF;color:#16191F}
+a{color:#B4481A}a:hover{color:#8A3512}
+input::placeholder{color:#8A8F98}
+input:focus{outline:none;border-color:#16191F !important;box-shadow:0 0 0 3px rgba(196,80,28,.18)}
+button:focus-visible,a:focus-visible{outline:2px solid #C4501C;outline-offset:2px}
+</style>
+</helmet>
+<div style="width: 100%; min-height: 100vh; position: relative; background: #F6F4EF">
+<sc-if value="{{showForm}}" hint-placeholder-val="{{ true }}">
+<div style="width: 100%; min-height: 100vh; display: flex; flex-direction: column; box-sizing: border-box">
+
+<div style="display: flex; align-items: center; gap: 12px; padding: 10px 16px; background: #ECE8E0; border-bottom: 1px solid #DCD5C9; flex-wrap: wrap">
+<span style="display: flex; gap: 6px" aria-hidden="true"><span style="width: 11px; height: 11px; border-radius: 6px; background: #E0655A"></span><span style="width: 11px; height: 11px; border-radius: 6px; background: #E2B33F"></span><span style="width: 11px; height: 11px; border-radius: 6px; background: #5DB35A"></span></span>
+<div style="flex: 1 1 320px; min-width: 0; display: flex; align-items: center; gap: 8px; height: 34px; padding: 0 12px; border-radius: 17px; background: #FFFFFF; border: 1px solid #DCD5C9">
+<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#3A7D44" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"></rect><path d="M8 11V7a4 4 0 0 1 8 0v4"></path></svg>
+<span style="font-family: 'IBM Plex Mono', monospace; font-size: 13px; color: #16191F; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{urlText}}</span>
+</div>
+<label style="display: flex; align-items: center; gap: 8px; font-size: 12px; color: #5B606A">Prototype — open URL<select value="{{url}}" onChange="{{onUrl}}" aria-label="Simulate URL" style="height: 34px; padding: 0 10px; border: 1px solid #CFC8BC; border-radius: 8px; background: #FFFFFF; font-family: 'IBM Plex Mono', monospace; font-size: 12.5px; color: #16191F"><sc-for list="{{urlOpts}}" as="o" hint-placeholder-count="3"><option value="{{o.v}}">{{o.l}}</option></sc-for></select></label>
+</div>
+
+<div style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 28px; padding: 32px 16px; box-sizing: border-box">
+
+<div style="display: flex; align-items: center; gap: 12px">
+<svg width="36" height="36" viewBox="0 0 36 36" fill="none" aria-hidden="true"><path d="M18 3L31 10.5V25.5L18 33L5 25.5V10.5L18 3Z" stroke="#C4501C" stroke-width="2"></path><path d="M18 3V18M18 18L31 25.5M18 18L5 25.5" stroke="#16191F" stroke-width="1.5"></path></svg>
+<div style="display: flex; flex-direction: column; gap: 2px">
+<div style="font-family: 'Space Grotesk', sans-serif; font-size: 20px; font-weight: 600; letter-spacing: -0.01em">3D Surgical</div>
+<div style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.14em; color: #5B606A">{{brandSub}}</div>
+</div>
+</div>
+
+<sc-if value="{{isUnknown}}" hint-placeholder-val="{{ false }}">
+<div style="width: 100%; max-width: 440px; padding: 32px; border: 1px solid #E2DDD3; border-radius: 14px; background: #FFFFFF; display: flex; flex-direction: column; gap: 12px; box-sizing: border-box; text-align: center">
+<h1 style="margin: 0; font-family: 'Space Grotesk', sans-serif; font-size: 24px; font-weight: 500">No space at this address</h1>
+<p style="margin: 0; font-size: 14px; line-height: 1.55; color: #5B606A">There is no company space at <b style="font-family: 'IBM Plex Mono', monospace; color: #16191F">{{host}}</b>. Check the link your space admin shared with you.</p>
+</div>
+</sc-if>
+
+<sc-if value="{{showCard}}" hint-placeholder-val="{{ true }}">
+<div style="width: 100%; max-width: 440px; padding: 32px; border: 1px solid #E2DDD3; border-radius: 14px; background: #FFFFFF; display: flex; flex-direction: column; gap: 22px; box-sizing: border-box">
+
+<sc-if value="{{isAdmin}}" hint-placeholder-val="{{ true }}">
+<div style="display: flex; flex-direction: column; gap: 8px">
+<span style="align-self: flex-start; padding: 4px 10px; border-radius: 999px; background: #16191F; color: #FFFFFF; font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em">PLATFORM ADMIN</span>
+<h1 style="margin: 0; font-family: 'Space Grotesk', sans-serif; font-size: 28px; font-weight: 500; letter-spacing: -0.02em">Admin console sign in</h1>
+<span style="font-size: 13.5px; line-height: 1.5; color: #5B606A">Create and manage all company spaces. Company users sign in at their own space URL.</span>
+</div>
+</sc-if>
+
+<sc-if value="{{isCompany}}" hint-placeholder-val="{{ false }}">
+<div style="display: flex; flex-direction: column; gap: 14px">
+<div style="display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 10px; background: #F6F4EF; border: 1px solid #E9E3D8">
+<span style="width: 40px; height: 40px; border-radius: 9px; background: #C4501C; color: #FFFFFF; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 15px; flex: 0 0 auto">{{spInit}}</span>
+<span style="display: flex; flex-direction: column; gap: 2px; min-width: 0"><span style="font-size: 15px; font-weight: 600">{{spName}}</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #5B606A">{{host}}</span></span>
+</div>
+<h1 style="margin: 0; font-family: 'Space Grotesk', sans-serif; font-size: 28px; font-weight: 500; letter-spacing: -0.02em">Sign in</h1>
+</div>
+</sc-if>
+
+<div style="display: flex; flex-direction: column; gap: 18px">
+<div style="display: flex; flex-direction: column; gap: 8px">
+<label for="email" style="font-size: 14px; font-weight: 500">Email</label>
+<input id="email" type="email" autocomplete="username" placeholder="you@company.com" value="{{email}}" onChange="{{onEmail}}" onKeyDown="{{onKey}}" style="height: 48px; padding: 0 14px; border-radius: 8px; background: #FFFFFF; font-family: 'IBM Plex Sans', sans-serif; font-size: 15px; color: #16191F; box-sizing: border-box; border: 1px solid {{emailBorder}}">
+<sc-if value="{{emailError}}" hint-placeholder-val="{{ false }}">
+<div style="font-size: 13px; color: #B3261E">{{emailError}}</div>
+</sc-if>
+</div>
+<div style="display: flex; flex-direction: column; gap: 8px">
+<div style="display: flex; justify-content: space-between; align-items: baseline">
+<label for="password" style="font-size: 14px; font-weight: 500">Password</label>
+<a href="#forgot" style="font-size: 13px; font-weight: 500; text-decoration: none">Forgot password?</a>
+</div>
+<div style="position: relative; display: flex">
+<input id="password" type="{{pwType}}" autocomplete="current-password" placeholder="Enter your password" value="{{password}}" onChange="{{onPassword}}" onKeyDown="{{onKey}}" style="flex-grow: 1; height: 48px; padding: 0 52px 0 14px; border-radius: 8px; border: 1px solid {{pwBorder}}; background: #FFFFFF; font-family: 'IBM Plex Sans', sans-serif; font-size: 15px; color: #16191F; box-sizing: border-box">
+<button type="button" onClick="{{togglePw}}" aria-label="{{pwToggleLabel}}" style="position: absolute; right: 2px; top: 2px; width: 44px; height: 44px; border: 0; background: transparent; color: #5B606A; cursor: pointer; display: flex; align-items: center; justify-content: center; border-radius: 6px">
+<sc-if value="{{showPw}}" hint-placeholder-val="{{ false }}">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3l18 18"></path><path d="M10.6 5.1A9.8 9.8 0 0112 5c5 0 9 4.5 10 7-.4 1-1.3 2.4-2.6 3.7M6.6 6.6C4.4 8 2.8 10.2 2 12c1 2.5 5 7 10 7 1.9 0 3.6-.6 5-1.5"></path><path d="M9.9 9.9a3 3 0 004.2 4.2"></path></svg>
+</sc-if>
+<sc-if value="{{hidePw}}" hint-placeholder-val="{{ true }}">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12c1-2.5 5-7 10-7s9 4.5 10 7c-1 2.5-5 7-10 7S3 14.5 2 12z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+</sc-if>
+</button>
+</div>
+<sc-if value="{{pwError}}" hint-placeholder-val="{{ false }}">
+<div style="font-size: 13px; color: #B3261E">{{pwError}}</div>
+</sc-if>
+</div>
+
+<label style="display: flex; align-items: center; gap: 10px; font-size: 14px; color: #3A3F48; cursor: pointer; min-height: 24px">
+<input type="checkbox" checked="{{remember}}" onChange="{{toggleRemember}}" style="width: 18px; height: 18px; margin: 0; accent-color: #C4501C">
+Keep me signed in
+</label>
+
+<sc-if value="{{formError}}" hint-placeholder-val="{{ false }}">
+<div role="alert" style="padding: 12px 14px; border-radius: 8px; background: #FBEAE8; border: 1px solid #F0C2BD; font-size: 14px; line-height: 1.45; color: #8C1D18">{{formError}}</div>
+</sc-if>
+
+<button type="button" onClick="{{submit}}" disabled="{{loading}}" style="height: 52px; border: 0; border-radius: 8px; background: {{btnBg}}; color: #FFFFFF; font-family: 'IBM Plex Sans', sans-serif; font-size: 16px; font-weight: 600; cursor: pointer">{{btnLabel}}</button>
+<span style="font-size: 12.5px; line-height: 1.5; color: #8A8F98; text-align: center">{{footNote}}</span>
+</div>
+</div>
+</sc-if>
+
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{signedIn}}" hint-placeholder-val="{{ false }}">
+<dc-import name="Dashboard" account-role="{{accountRole}}" space-id="{{dashSpace}}" admin-email="{{email}}" role-label="{{roleLabel}}" on-sign-out="{{signOut}}" spaces="{{spaces}}" base-domain="{{baseDomain}}" on-spaces-change="{{onSpacesChange}}" on-open-url="{{openUrl}}" hint-size="100%,100vh"></dc-import>
+</sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":"100%","height":"100%"}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.BASE = '3dsurgical.com';
+    this.ADMIN = { email: 'admin@3dsurgical.com', password: 'Admin@123', role: 'Super Admin' };
+    this.SPACE_PW = 'Space@123';
+    this.state = { url: 'admin', spaces: [{ name: 'Jajal Medical', slug: 'jajal-medical', admin: 'admin@jajalmedical.com', created: '14 Jul 2026', domain: '' }], email: 'admin@3dsurgical.com', password: 'Admin@123', showPw: false, remember: true, loading: false, signedIn: false, emailError: '', pwError: '', formError: '' };
+  }
+  componentWillUnmount() { if (this.t) clearTimeout(this.t); }
+  hostOf(u) { return u === 'admin' ? 'admin.' + this.BASE : u + '.' + this.BASE; }
+  goUrl(u, spaces) { const sp = (spaces || this.state.spaces).find((x) => x.slug === u); const c = u === 'admin' ? this.ADMIN : sp ? { email: sp.admin, password: this.SPACE_PW } : { email: '', password: '' }; this.setState({ url: u, signedIn: false, showPw: false, email: c.email, password: c.password, emailError: '', pwError: '', formError: '' }); }
+  doSubmit() { const v = this.renderVals(); v.runSubmit(); }
+  renderVals() {
+    const s = this.state;
+    const isAdmin = s.url === 'admin';
+    const sp = isAdmin ? null : s.spaces.find((x) => x.slug === s.url);
+    const unknown = !isAdmin && !sp;
+    const host = this.hostOf(s.url);
+    return {
+      url: s.url, host, urlText: 'https://' + host + (s.signedIn ? '' : '/login'),
+      urlOpts: [{ v: 'admin', l: 'admin.' + this.BASE }].concat(s.spaces.map((x) => ({ v: x.slug, l: x.slug + '.' + this.BASE }))).concat([{ v: 'unknown-co', l: 'unknown-co.' + this.BASE + ' (no space)' }]),
+      onUrl: (e) => this.goUrl(e.target.value),
+      isAdmin, isCompany: !!sp, isUnknown: unknown, showCard: !unknown,
+      brandSub: isAdmin ? 'ADMIN CONSOLE' : 'MANUFACTURING MANAGEMENT',
+      spName: sp ? sp.name : '', spInit: sp ? sp.name.split(' ').slice(0, 2).map((w) => w[0]).join('').toUpperCase() : '',
+      footNote: isAdmin ? 'Only platform administrators can sign in here. Demo: admin@3dsurgical.com / Admin@123' : 'Only ' + (sp ? sp.name : '') + ' users can sign in at this address. Demo password: ' + this.SPACE_PW,
+      accountRole: isAdmin ? 'admin' : 'company',
+      dashSpace: isAdmin ? (s.spaces[0] ? s.spaces[0].slug : '') : s.url,
+      spaces: s.spaces, baseDomain: this.BASE,
+      onSpacesChange: (list) => this.setState({ spaces: list }),
+      openUrl: (u) => this.goUrl(u),
+      roleLabel: isAdmin ? this.ADMIN.role : 'Space Admin · ' + (sp ? sp.name : ''),
+      email: s.email, password: s.password, showPw: s.showPw, hidePw: !s.showPw,
+      pwType: s.showPw ? 'text' : 'password', pwToggleLabel: s.showPw ? 'Hide password' : 'Show password',
+      remember: s.remember, loading: s.loading, signedIn: s.signedIn, showForm: !s.signedIn,
+      emailError: s.emailError, pwError: s.pwError, formError: s.formError,
+      emailBorder: s.emailError ? '#B3261E' : '#CFC8BC', pwBorder: s.pwError ? '#B3261E' : '#CFC8BC',
+      btnBg: s.loading ? '#8F4A2C' : '#C4501C', btnLabel: s.loading ? 'Signing in…' : (isAdmin ? 'Sign in to admin console' : 'Sign in to ' + (sp ? sp.name : '')),
+      onEmail: (e) => this.setState({ email: e.target.value, emailError: '', formError: '' }),
+      onPassword: (e) => this.setState({ password: e.target.value, pwError: '', formError: '' }),
+      togglePw: () => this.setState({ showPw: !s.showPw }),
+      toggleRemember: () => this.setState({ remember: !s.remember }),
+      signOut: () => this.goUrl(s.url),
+      onKey: (e) => { if (e.key === 'Enter') { e.preventDefault(); this.doSubmit(); } },
+      submit: () => this.doSubmit(),
+      runSubmit: () => {
+        if (s.loading || unknown) return;
+        if (sp && sp.status === 'Suspended') { this.setState({ formError: sp.name + ' is suspended. Contact your 3D Surgical platform admin.' }); return; }
+        const em = (s.email || '').trim();
+        let emailError = ''; let pwError = '';
+        if (!em) emailError = 'Enter your email address.';
+        else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)) emailError = 'Enter a valid email address.';
+        if (!s.password) pwError = 'Enter your password.';
+        if (emailError || pwError) { this.setState({ emailError, pwError, formError: '' }); return; }
+        this.setState({ loading: true, formError: '' });
+        this.t = setTimeout(() => {
+          const ok = isAdmin ? em.toLowerCase() === this.ADMIN.email && s.password === this.ADMIN.password : em.toLowerCase() === String(sp.admin).toLowerCase() && s.password === this.SPACE_PW;
+          if (ok) this.setState({ loading: false, signedIn: true, email: em });
+          else this.setState({ loading: false, formError: isAdmin ? 'Incorrect email or password. Company users should sign in at their space URL.' : 'Incorrect email or password for ' + sp.name + '.' });
+        }, 800);
+      }
+    };
+  }
+}
+</script>
+</body>
+</html>

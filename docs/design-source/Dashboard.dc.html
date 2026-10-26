@@ -1,0 +1,592 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Dashboard</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&amp;family=IBM+Plex+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+</style>
+</helmet>
+<div style="width: 100%; height: 100vh; min-width: 1100px; display: flex; background: #F7F8FA; font-family: 'IBM Plex Sans', system-ui, sans-serif; color: #101828; position: relative; overflow: hidden">
+
+<aside style="width: 256px; flex: 0 0 256px; height: 100vh; background: #0C1524; color: #C6CEDA; display: flex; flex-direction: column">
+<div style="display: flex; align-items: center; gap: 11px; padding: 20px 20px 18px">
+<svg width="34" height="34" viewBox="0 0 36 36" fill="none" aria-hidden="true"><path d="M18 3L31 10.5V25.5L18 33L5 25.5V10.5L18 3Z" stroke="#FF6633" stroke-width="2.2"></path><path d="M18 3V18M18 18L31 25.5M18 18L5 25.5" stroke="#FF8A5C" stroke-width="1.6"></path></svg>
+<div style="display: flex; flex-direction: column; gap: 2px">
+<div style="font-size: 15px; font-weight: 700; color: #FFFFFF; letter-spacing: -0.2px">3D <span style="color: #FF8A5C">Surgical</span></div>
+<div style="font-size: 10.5px; color: #8391A5; letter-spacing: 0.3px">Manufacturing Management</div>
+</div>
+</div>
+
+<div style="padding: 0 12px 4px; position: relative">
+<button type="button" onClick="{{toggleSpaceMenu}}" aria-expanded="{{spaceMenuExpanded}}" aria-label="Current company space: {{curName}}" style="width: 100%; display: flex; align-items: center; gap: 10px; padding: 9px 10px; border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 10px; background: rgba(255, 255, 255, 0.04); color: #FFFFFF; cursor: {{spaceCursor}}; text-align: left; font-family: 'IBM Plex Sans', sans-serif">
+<div style="width: 30px; height: 30px; border-radius: 8px; background: {{sideAvBg}}; color: #FFFFFF; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; flex: 0 0 auto">{{sideInit}}</div>
+<div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px">
+<div style="font-size: 10px; font-weight: 600; letter-spacing: 0.8px; text-transform: uppercase; color: #7A889C">{{sideKicker}}</div>
+<div style="font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{sideName}}</div>
+</div>
+<sc-if value="{{canSwitch}}" hint-placeholder-val="{{ true }}">
+<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#A5B2C4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex: 0 0 auto"><path d="m7 15 5 5 5-5M7 9l5-5 5 5"></path></svg>
+</sc-if>
+</button>
+<sc-if value="{{spaceMenuOpen}}" hint-placeholder-val="{{ false }}">
+<div style="position: absolute; left: 12px; right: 12px; top: 58px; z-index: 30; background: #FFFFFF; border: 1px solid #E4E7EC; border-radius: 12px; box-shadow: 0 12px 34px rgba(16, 24, 40, 0.28); padding: 6px; display: flex; flex-direction: column; gap: 2px">
+<div style="padding: 6px 10px 4px; font-size: 10px; font-weight: 600; letter-spacing: 0.8px; text-transform: uppercase; color: #667085">Switch space</div>
+<sc-for list="{{spaceItems}}" as="si" hint-placeholder-count="1">
+<button type="button" onClick="{{si.pick}}" style="display: flex; align-items: center; gap: 10px; min-height: 40px; padding: 6px 10px; border: 0; border-radius: 8px; background: {{si.bg}}; color: #101828; cursor: pointer; text-align: left; font-family: 'IBM Plex Sans', sans-serif">
+<div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px">
+<div style="font-size: 13px; font-weight: 600">{{si.name}}</div>
+<div style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #667085">{{si.slug}}</div>
+</div>
+<sc-if value="{{si.current}}" hint-placeholder-val="{{ false }}">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#C4320A" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>
+</sc-if>
+</button>
+</sc-for>
+<button type="button" onClick="{{manageSpaces}}" style="min-height: 38px; margin-top: 4px; padding: 0 10px; border: 0; border-top: 1px solid #F2F4F7; border-radius: 0; background: transparent; color: #C4320A; font-family: 'IBM Plex Sans', sans-serif; font-size: 13px; font-weight: 600; text-align: left; cursor: pointer">Manage company spaces</button>
+</div>
+</sc-if>
+</div>
+
+<nav aria-label="Main" style="flex: 1; overflow-y: auto; padding: 4px 12px 12px">
+<sc-for list="{{navSections}}" as="sec" hint-placeholder-count="3">
+<div style="margin-top: 16px; display: flex; flex-direction: column; gap: 2px">
+<div style="font-size: 10px; font-weight: 600; letter-spacing: 0.9px; text-transform: uppercase; color: #7A889C; padding: 0 10px 7px">{{sec.title}}</div>
+<sc-for list="{{sec.items}}" as="item" hint-placeholder-count="4">
+<button type="button" onClick="{{item.pick}}" aria-current="{{item.current}}" style="display: flex; align-items: center; gap: 11px; width: 100%; min-height: 38px; padding: 9px 11px 9px {{item.padLeft}}; border: 0; border-left: 3px solid {{item.bar}}; border-radius: 9px; background: {{item.bg}}; color: {{item.color}}; font-family: 'IBM Plex Sans', sans-serif; font-size: 13px; font-weight: {{item.weight}}; text-align: left; cursor: pointer">
+<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex: 0 0 auto"><path d="{{item.icon}}"></path></svg>
+{{item.label}}
+</button>
+</sc-for>
+</div>
+</sc-for>
+</nav>
+
+<div style="padding: 12px; border-top: 1px solid rgba(255, 255, 255, 0.07)">
+<div style="display: flex; align-items: center; gap: 10px; padding: 4px">
+<button type="button" onClick="{{goAccount}}" title="Account settings" style="flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; padding: 6px; border: 0; border-radius: 8px; background: {{accountBg}}; cursor: pointer; text-align: left; font-family: 'IBM Plex Sans', sans-serif">
+<div style="width: 32px; height: 32px; border-radius: 16px; background: {{avatarBg}}; color: #FFFFFF; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; flex: 0 0 auto">{{initials}}</div>
+<div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px">
+<div style="font-size: 12.5px; font-weight: 600; color: #FFFFFF; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{userName}}</div>
+<div style="font-size: 11px; color: #8391A5; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{roleLabel}}</div>
+</div>
+</button>
+<button type="button" onClick="{{signOut}}" aria-label="Sign out" title="Sign out" style="width: 36px; height: 36px; flex: 0 0 auto; border: 0; border-radius: 8px; background: transparent; color: #8391A5; cursor: pointer; display: flex; align-items: center; justify-content: center">
+<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"></path></svg>
+</button>
+</div>
+</div>
+</aside>
+
+<div style="flex: 1; min-width: 0; height: 100vh; display: flex; flex-direction: column">
+<header style="height: 64px; flex: 0 0 64px; background: #FFFFFF; border-bottom: 1px solid #E4E7EC; display: flex; align-items: center; gap: 16px; padding: 0 24px; box-sizing: border-box; position: relative; z-index: 5">
+<div style="flex: 1 1 auto; min-width: 130px; display: flex; flex-direction: column; gap: 1px">
+<h1 style="margin: 0; font-size: 16.5px; font-weight: 700; letter-spacing: -0.3px; color: #101828; line-height: 1.2">{{pageTitle}}</h1>
+<div style="font-size: 12.5px; color: #667085">{{pageSubtitle}}</div>
+</div>
+<div title="{{hostTitle}}" style="flex: 0 1 auto; min-width: 0; display: flex; align-items: center; gap: 7px; height: 32px; padding: 0 11px; border: 1px solid {{hostBorder}}; border-radius: 16px; background: {{hostBg}}"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#067647" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"></rect><path d="M8 11V7a4 4 0 0 1 8 0v4"></path></svg><span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #344054; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{hostText}}</span></div>
+
+<label style="position: relative; flex: 0 1 200px; min-width: 0; display: flex">
+<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#98A2B3" stroke-width="2" stroke-linecap="round" aria-hidden="true" style="position: absolute; left: 11px; top: 12px"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>
+<input type="search" aria-label="Search" placeholder="Search…" style="width: 100%; height: 38px; border: 1px solid #E4E7EC; border-radius: 9px; padding: 0 12px 0 33px; font-family: 'IBM Plex Sans', sans-serif; font-size: 13px; background: #F9FAFB; color: #101828; box-sizing: border-box">
+</label>
+
+<div style="position: relative; flex: 0 0 auto">
+<button type="button" onClick="{{toggleNotif}}" aria-label="Notifications" aria-expanded="{{notifExpanded}}" style="position: relative; width: 40px; height: 40px; border: 1px solid #E4E7EC; border-radius: 9px; background: #FFFFFF; color: #475467; cursor: pointer; display: flex; align-items: center; justify-content: center">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+</button>
+<sc-if value="{{notifOpen}}" hint-placeholder-val="{{ false }}">
+<div style="position: absolute; top: 48px; right: 0; width: 300px; background: #FFFFFF; border: 1px solid #E4E7EC; border-radius: 12px; box-shadow: 0 12px 34px rgba(16, 24, 40, 0.16); display: flex; flex-direction: column">
+<div style="padding: 14px 16px; border-bottom: 1px solid #F2F4F7; font-size: 14px; font-weight: 600">Notifications</div>
+<div style="padding: 28px 16px; text-align: center; font-size: 13px; color: #667085">You're all caught up.</div>
+</div>
+</sc-if>
+</div>
+
+<div style="position: relative; flex: 0 0 auto">
+<button type="button" onClick="{{toggleLang}}" aria-label="Language" aria-expanded="{{langExpanded}}" style="display: flex; align-items: center; gap: 6px; height: 40px; padding: 0 11px; border: 1px solid #E4E7EC; border-radius: 9px; background: #FFFFFF; color: #475467; cursor: pointer; font-family: 'IBM Plex Sans', sans-serif; font-size: 12.5px; font-weight: 600">
+<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
+{{langCode}}
+</button>
+<sc-if value="{{langOpen}}" hint-placeholder-val="{{ false }}">
+<div style="position: absolute; top: 48px; right: 0; width: 180px; background: #FFFFFF; border: 1px solid #E4E7EC; border-radius: 12px; box-shadow: 0 12px 34px rgba(16, 24, 40, 0.16); padding: 6px; display: flex; flex-direction: column; gap: 2px">
+<sc-for list="{{langs}}" as="l" hint-placeholder-count="4">
+<button type="button" onClick="{{l.pick}}" style="display: flex; justify-content: space-between; align-items: center; height: 36px; padding: 0 10px; border: 0; border-radius: 8px; background: {{l.bg}}; color: {{l.color}}; font-family: 'IBM Plex Sans', sans-serif; font-size: 13px; font-weight: 500; cursor: pointer">{{l.label}}<span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #667085">{{l.code}}</span></button>
+</sc-for>
+</div>
+</sc-if>
+</div>
+
+</header>
+
+<main style="flex: 1; min-height: 0; overflow: auto; padding: 26px 28px; box-sizing: border-box">
+<sc-if value="{{isDashboard}}" hint-placeholder-val="{{ true }}">
+<div aria-label="Parts dashboard" style="display: flex; flex-direction: column; gap: 18px; font-family: 'IBM Plex Sans', sans-serif; color: #101828">
+<section style="display: flex; flex-direction: column; gap: 10px"><div style="display: flex; justify-content: space-between; align-items: flex-end; gap: 16px"><div style="display: flex; flex-direction: column; gap: 2px"><h3 style="margin: 0; font-size: 14px; font-weight: 700; color: #101828">Quick actions</h3></div></div>
+<div style="display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 12px"><sc-for list="{{pdb.quick}}" as="q" hint-placeholder-count="6"><button type="button" onClick="{{q.go}}" style="display: flex; flex-direction: column; gap: 8px; align-items: flex-start; padding: 14px; border: 1px solid {{q.border}}; border-radius: 12px; background: {{q.bg}}; color: {{q.color}}; text-align: left; cursor: pointer; font-family: 'IBM Plex Sans', sans-serif"><span style="width: 32px; height: 32px; border-radius: 9px; background: {{q.iconBg}}; color: {{q.iconColor}}; display: flex; align-items: center; justify-content: center"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{q.icon}}"></path></svg></span><span style="font-size: 13.5px; font-weight: 700">{{q.label}}</span><span style="font-size: 11.5px; color: {{q.subColor}}">{{q.sub}}</span></button></sc-for></div></section>
+<div style="display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 12px"><sc-for list="{{pdb.kpis}}" as="k" hint-placeholder-count="6"><button type="button" onClick="{{k.pick}}" style="display: flex; flex-direction: column; gap: 4px; padding: 14px 16px; border: 1px solid #E4E7EC; border-radius: 14px; background: #FFFFFF; border-radius: 12px; text-align: left; cursor: pointer; font-family: 'IBM Plex Sans', sans-serif"><span style="font-size: 11px; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; color: #667085">{{k.label}}</span><span style="font-size: 26px; font-weight: 700; color: {{k.color}}">{{k.n}}</span><span style="font-size: 11.5px; color: #98A2B3">{{k.sub}}</span></button></sc-for></div>
+<div style="display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 14px">
+<section style="border: 1px solid #E4E7EC; border-radius: 14px; background: #FFFFFF; padding: 18px 20px; display: flex; flex-direction: column; gap: 12px"><div style="display: flex; flex-direction: column; gap: 2px"><h3 style="margin: 0; font-size: 14px; font-weight: 700; color: #101828">Production pipeline</h3><span style="font-size: 12px; color: #667085">Active parts by where they are in their workflow.</span></div>
+<sc-for list="{{pdb.phases}}" as="b" hint-placeholder-count="6"><div style="display: grid; grid-template-columns: 170px minmax(0, 1fr) 32px; gap: 12px; align-items: center; font-size: 13px"><span style="color: #344054">{{b.label}}</span><div style="height: 14px; border-radius: 7px; background: #F2F4F7; overflow: hidden"><div style="height: 100%; width: {{b.w}}; border-radius: 7px; background: {{b.color}}"></div></div><span style="font-weight: 700; text-align: right">{{b.n}}</span></div></sc-for></section>
+<section style="border: 1px solid #E4E7EC; border-radius: 14px; background: #FFFFFF; padding: 18px 20px; display: flex; flex-direction: column; gap: 12px"><div style="display: flex; flex-direction: column; gap: 2px"><h3 style="margin: 0; font-size: 14px; font-weight: 700; color: #101828">Due dates</h3><span style="font-size: 12px; color: #667085">Active parts by due date.</span></div>
+<sc-for list="{{pdb.buckets}}" as="b" hint-placeholder-count="5"><div style="display: grid; grid-template-columns: 110px minmax(0, 1fr) 32px; gap: 12px; align-items: center; font-size: 13px"><span style="color: #344054">{{b.label}}</span><div style="height: 14px; border-radius: 7px; background: #F2F4F7; overflow: hidden"><div style="height: 100%; width: {{b.w}}; border-radius: 7px; background: {{b.bar}}"></div></div><span style="font-weight: 700; text-align: right; color: {{b.color}}">{{b.n}}</span></div></sc-for></section>
+</div>
+<div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px">
+<section style="border: 1px solid #E4E7EC; border-radius: 14px; background: #FFFFFF; padding: 18px 20px; display: flex; flex-direction: column; gap: 10px"><h3 style="margin: 0; font-size: 14px; font-weight: 700; color: #101828">By part type</h3><sc-for list="{{pdb.byType}}" as="b" hint-placeholder-count="4"><div style="display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 2fr) 28px; gap: 10px; align-items: center; font-size: 12.5px"><span style="color: #344054; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">{{b.label}}</span><div style="height: 8px; border-radius: 4px; background: #F2F4F7; overflow: hidden"><div style="height: 100%; width: {{b.w}}; border-radius: 4px; background: #E24E1B"></div></div><span style="font-weight: 700; text-align: right">{{b.n}}</span></div></sc-for></section>
+<section style="border: 1px solid #E4E7EC; border-radius: 14px; background: #FFFFFF; padding: 18px 20px; display: flex; flex-direction: column; gap: 10px"><h3 style="margin: 0; font-size: 14px; font-weight: 700; color: #101828">By material</h3><sc-for list="{{pdb.byTech}}" as="b" hint-placeholder-count="4"><div style="display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 2fr) 28px; gap: 10px; align-items: center; font-size: 12.5px"><span style="color: #344054; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">{{b.label}}</span><div style="height: 8px; border-radius: 4px; background: #F2F4F7; overflow: hidden"><div style="height: 100%; width: {{b.w}}; border-radius: 4px; background: #E24E1B"></div></div><span style="font-weight: 700; text-align: right">{{b.n}}</span></div></sc-for></section>
+<section style="border: 1px solid #E4E7EC; border-radius: 14px; background: #FFFFFF; padding: 18px 20px; display: flex; flex-direction: column; gap: 10px"><h3 style="margin: 0; font-size: 14px; font-weight: 700; color: #101828">Machine load</h3><div style="display: grid; grid-template-columns: minmax(0, 1.6fr) 60px 60px 60px; gap: 8px; font-size: 10.5px; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; color: #667085"><div>Machine</div><div>Building</div><div>Queued</div><div>After</div></div><sc-for list="{{pdb.machRows}}" as="m" hint-placeholder-count="4"><div style="display: grid; grid-template-columns: minmax(0, 1.6fr) 60px 60px 60px; gap: 8px; align-items: center; font-size: 12.5px; padding: 6px 0; border-top: 1px solid #F2F4F7"><span style="color: #344054; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">{{m.label}}</span><span style="font-weight: 700; color: {{m.prColor}}">{{m.printing}}</span><span style="font-weight: 600">{{m.queued}}</span><span style="color: #667085">{{m.after}}</span></div></sc-for><sc-if value="{{pdb.noMach}}" hint-placeholder-val="{{ false }}"><span style="font-size: 12px; color: #667085">No active parts are assigned to a machine.</span></sc-if></section>
+</div>
+<div style="display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); gap: 14px">
+<section style="border: 1px solid #E4E7EC; border-radius: 14px; background: #FFFFFF; padding: 18px 20px; display: flex; flex-direction: column; gap: 10px"><div style="display: flex; flex-direction: column; gap: 2px"><h3 style="margin: 0; font-size: 14px; font-weight: 700; color: #101828">Due in the next 14 days</h3><span style="font-size: 12px; color: #667085">Overdue first. Open a part to work on its current stage.</span></div>
+<div style="display: grid; grid-template-columns: 170px minmax(0, 1.4fr) minmax(0, 1fr) 100px minmax(0, 0.9fr) 60px; gap: 10px; padding: 0 10px; font-size: 10.5px; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; color: #667085"><div>Part ID</div><div>Part</div><div>Current stage</div><div>Due</div><div>Owner</div><div></div></div>
+<sc-for list="{{pdb.dueRows}}" as="r" hint-placeholder-count="5"><div style="display: grid; grid-template-columns: 170px minmax(0, 1.4fr) minmax(0, 1fr) 100px minmax(0, 0.9fr) 60px; gap: 10px; align-items: center; padding: 9px 10px; border: 1px solid #EAECF0; border-radius: 10px; font-size: 12.5px"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11.5px; font-weight: 600; color: #C4320A">{{r.pid}}</span><span style="display: flex; flex-direction: column; gap: 1px; min-width: 0"><span style="font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">{{r.name}}</span><span style="font-size: 11.5px; color: #667085">{{r.sub}}</span></span><span style="color: #344054">{{r.stage}}</span><span style="display: flex; flex-direction: column; gap: 1px"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11.5px">{{r.due}}</span><span style="font-size: 11.5px; font-weight: 700; color: {{r.relColor}}">{{r.rel}}</span></span><span style="color: {{r.whoColor}}">{{r.who}}</span><button type="button" onClick="{{r.open}}" style="height: 30px; padding: 0 10px; border: 1px solid #D0D5DD; border-radius: 8px; background: #FFFFFF; font-family: 'IBM Plex Sans', sans-serif; font-size: 12px; font-weight: 600; cursor: pointer">Open</button></div></sc-for>
+<sc-if value="{{pdb.noDue}}" hint-placeholder-val="{{ false }}"><span style="font-size: 12px; color: #667085">Nothing due in the next 14 days.</span></sc-if></section>
+<section style="border: 1px solid #E4E7EC; border-radius: 14px; background: #FFFFFF; padding: 18px 20px; display: flex; flex-direction: column; gap: 10px"><div style="display: flex; flex-direction: column; gap: 2px"><h3 style="margin: 0; font-size: 14px; font-weight: 700; color: #101828">Needs attention</h3><span style="font-size: 12px; color: #667085">Overdue parts, parts with no owner and QA forms waiting for approval.</span></div>
+<sc-for list="{{pdb.att}}" as="a" hint-placeholder-count="4"><button type="button" onClick="{{a.open}}" style="display: grid; grid-template-columns: 120px minmax(0, 1fr); gap: 10px; align-items: center; padding: 8px 10px; border: 1px solid #EAECF0; border-radius: 9px; background: #FFFFFF; text-align: left; cursor: pointer; font-family: 'IBM Plex Sans', sans-serif; font-size: 12.5px; color: #344054"><span style="display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 600; justify-self: start; white-space: nowrap; background: {{a.bg}}; color: {{a.color}}">{{a.tag}}</span><span>{{a.text}}</span></button></sc-for>
+<sc-if value="{{pdb.hasAttMore}}" hint-placeholder-val="{{ false }}"><span style="font-size: 12px; color: #667085">{{pdb.attMore}}</span></sc-if><sc-if value="{{pdb.noAtt}}" hint-placeholder-val="{{ false }}"><span style="font-size: 12px; color: #667085">All clear.</span></sc-if></section>
+</div>
+<div style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr); gap: 14px">
+<section style="border: 1px solid #E4E7EC; border-radius: 14px; background: #FFFFFF; padding: 18px 20px; display: flex; flex-direction: column; gap: 10px"><h3 style="margin: 0; font-size: 14px; font-weight: 700; color: #101828">By workflow</h3><sc-for list="{{pdb.byWf}}" as="b" hint-placeholder-count="4"><div style="display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 2fr) 28px; gap: 10px; align-items: center; font-size: 12.5px"><span style="color: #344054; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">{{b.label}}</span><div style="height: 8px; border-radius: 4px; background: #F2F4F7; overflow: hidden"><div style="height: 100%; width: {{b.w}}; border-radius: 4px; background: #E24E1B"></div></div><span style="font-weight: 700; text-align: right">{{b.n}}</span></div></sc-for></section>
+<section style="border: 1px solid #E4E7EC; border-radius: 14px; background: #FFFFFF; padding: 18px 20px; display: flex; flex-direction: column; gap: 8px"><h3 style="margin: 0; font-size: 14px; font-weight: 700; color: #101828">Recent activity</h3>
+<sc-for list="{{pdb.recent}}" as="e" hint-placeholder-count="5"><button type="button" onClick="{{e.open}}" style="display: grid; grid-template-columns: 170px minmax(0, 1fr) minmax(0, 0.8fr) 110px; gap: 10px; align-items: center; padding: 7px 0; border: 0; border-top: 1px solid #F2F4F7; background: transparent; text-align: left; cursor: pointer; font-family: 'IBM Plex Sans', sans-serif; font-size: 12.5px; color: #344054"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11.5px; font-weight: 600; color: #C4320A">{{e.pid}}</span><span>{{e.text}}</span><span style="color: #667085">{{e.by}}</span><span style="font-size: 12px; color: #667085">{{e.when}}</span></button></sc-for>
+<sc-if value="{{pdb.noRecent}}" hint-placeholder-val="{{ false }}"><span style="font-size: 12px; color: #667085">No stage completions yet.</span></sc-if></section>
+</div>
+</div>
+</sc-if>
+
+
+<sc-if value="{{isExample}}" hint-placeholder-val="{{ false }}">
+<div style="display: flex; flex-direction: column; gap: 20px; font-family: 'IBM Plex Sans', sans-serif; color: #101828">
+<section style="border-radius: 16px; background: #0C1524; color: #FFFFFF; padding: 24px 26px; display: flex; flex-direction: column; gap: 16px">
+<div style="display: flex; justify-content: space-between; gap: 20px; flex-wrap: wrap; align-items: flex-start">
+<div style="display: flex; flex-direction: column; gap: 6px; max-width: 720px"><span style="font-size: 11px; font-weight: 700; letter-spacing: 1px; color: #FF8A5C">END-TO-END EXAMPLE</span><h2 style="margin: 0; font-size: 22px; font-weight: 700">Cranial plate — case JM-0430</h2><p style="margin: 0; font-size: 13.5px; line-height: 1.6; color: #C8CFDA">One patient-specific cranial reconstruction, three parts on three technologies: an FDM skull model for planning, an SLS nylon prototype of the plate to check fit on that model, then the final titanium plate printed on DMLS. Every step below is live sample data — click through to see it in each module.</p></div>
+<button type="button" onClick="{{ex.openCase}}" style="height: 40px; padding: 0 16px; border: 0; border-radius: 9px; background: #E24E1B; color: #FFFFFF; font-family: 'IBM Plex Sans', sans-serif; font-size: 13px; font-weight: 600; cursor: pointer">Open case JM-0430 →</button>
+</div>
+<div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px">
+<sc-for list="{{ex.facts}}" as="k" hint-placeholder-count="4"><div style="padding: 12px 14px; border-radius: 10px; background: rgba(255,255,255,.06); display: flex; flex-direction: column; gap: 3px"><span style="font-size: 11px; font-weight: 600; color: #98A2B3">{{k.label}}</span><span style="font-size: 13.5px; font-weight: 600">{{k.value}}</span></div></sc-for>
+</div>
+</section>
+<div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px">
+<sc-for list="{{ex.parts}}" as="p" hint-placeholder-count="3">
+<button type="button" onClick="{{p.open}}" style="border: 1px solid #E4E7EC; border-left: 3px solid {{p.accent}}; border-radius: 12px; background: #FFFFFF; padding: 14px 16px; display: flex; flex-direction: column; gap: 8px; text-align: left; cursor: pointer; font-family: 'IBM Plex Sans', sans-serif; color: #101828">
+<div style="display: flex; justify-content: space-between; gap: 8px"><span style="font-size: 11px; font-weight: 700; letter-spacing: 0.6px; color: {{p.accent}}">{{p.tag}}</span><span style="padding: 2px 8px; border-radius: 6px; background: {{p.stBg}}; color: {{p.stColor}}; font-size: 11px; font-weight: 700">{{p.status}}</span></div>
+<span style="font-size: 14.5px; font-weight: 700">{{p.name}}</span>
+<span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #C4320A">{{p.pid}}</span>
+<span style="font-size: 12.5px; color: #475467; line-height: 1.5">{{p.line}}</span>
+</button>
+</sc-for>
+</div>
+<section style="border: 1px solid #E4E7EC; border-radius: 14px; background: #FFFFFF; padding: 20px 22px; display: flex; flex-direction: column; gap: 4px">
+<h3 style="margin: 0 0 10px; font-size: 15px; font-weight: 700">Walkthrough — step by step</h3>
+<sc-for list="{{ex.steps}}" as="st" hint-placeholder-count="8">
+<div style="display: grid; grid-template-columns: 40px minmax(0, 1fr); gap: 14px">
+<div style="display: flex; flex-direction: column; align-items: center"><span style="width: 30px; height: 30px; border-radius: 15px; background: {{st.dotBg}}; color: {{st.dotColor}}; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; flex: 0 0 auto">{{st.num}}</span><span style="flex: 1; width: 2px; background: #EAECF0; margin: 4px 0"></span></div>
+<div style="display: flex; flex-direction: column; gap: 8px; padding-bottom: 22px">
+<div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap"><span style="font-size: 11px; font-weight: 700; letter-spacing: 0.6px; color: #98A2B3">{{st.phase}}</span><span style="padding: 2px 8px; border-radius: 6px; background: {{st.dotBg}}; color: {{st.dotColor}}; font-size: 11px; font-weight: 700">{{st.state}}</span></div>
+<span style="font-size: 15px; font-weight: 700">{{st.title}}</span>
+<span style="font-size: 13px; line-height: 1.6; color: #475467">{{st.body}}</span>
+<div style="display: flex; flex-wrap: wrap; gap: 6px"><sc-for list="{{st.facts}}" as="fc" hint-placeholder-count="3"><span style="padding: 3px 9px; border-radius: 999px; background: #F2F4F7; color: #344054; font-size: 11.5px; font-weight: 600">{{fc}}</span></sc-for></div>
+<div style="display: flex; flex-wrap: wrap; gap: 8px"><sc-for list="{{st.actions}}" as="a" hint-placeholder-count="2"><button type="button" onClick="{{a.go}}" style="height: 32px; padding: 0 12px; border: 1px solid #E4E7EC; border-radius: 8px; background: #FFFFFF; font-family: 'IBM Plex Sans', sans-serif; font-size: 12.5px; font-weight: 600; color: #344054; cursor: pointer; white-space: nowrap">{{a.label}} →</button></sc-for></div>
+</div>
+</div>
+</sc-for>
+</section>
+<section style="border: 1px solid #E4E7EC; border-radius: 14px; background: #FFFFFF; overflow: hidden">
+<div style="padding: 16px 20px; border-bottom: 1px solid #EAECF0"><h3 style="margin: 0; font-size: 15px; font-weight: 700">Traceability summary</h3><span style="font-size: 12.5px; color: #667085">What each part is linked to across the resource modules</span></div>
+<table style="width: 100%; border-collapse: collapse; font-size: 12.5px">
+<thead><tr><sc-for list="{{ex.traceHead}}" as="h" hint-placeholder-count="8"><th style="padding: 10px 12px; text-align: left; font-size: 10.5px; font-weight: 700; letter-spacing: 0.5px; color: #667085; background: #F9FAFB; border-bottom: 1px solid #EAECF0">{{h}}</th></sc-for></tr></thead>
+<tbody><sc-for list="{{ex.trace}}" as="tr" hint-placeholder-count="3"><tr><sc-for list="{{tr.cells}}" as="c" hint-placeholder-count="8"><td style="padding: 11px 12px; border-bottom: 1px solid #F2F4F7; vertical-align: top; color: #344054; line-height: 1.45">{{c}}</td></sc-for></tr></sc-for></tbody>
+</table>
+</section>
+</div>
+</sc-if>
+
+<sc-if value="{{isSpaces}}" hint-placeholder-val="{{ false }}">
+<section style="border: 1px solid #E4E7EC; border-radius: 14px; background: #FFFFFF; display: flex; flex-direction: column; overflow: hidden">
+<div style="display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; border-bottom: 1px solid #F2F4F7">
+<h2 style="margin: 0; font-size: 15px; font-weight: 600">All company spaces</h2>
+<div style="display: flex; align-items: center; gap: 12px"><div style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #667085">{{spaceCountLabel}}</div><button type="button" onClick="{{openCreate}}" style="height: 36px; padding: 0 14px; border: 0; border-radius: 9px; background: #E24E1B; color: #FFFFFF; font-family: 'IBM Plex Sans', sans-serif; font-size: 13px; font-weight: 600; cursor: pointer">+ New company space</button></div>
+</div>
+<div style="display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1.9fr) minmax(0, 1.3fr) minmax(0, 1fr) minmax(0, 0.8fr) 120px; gap: 12px; padding: 10px 20px; background: #F9FAFB; border-bottom: 1px solid #F2F4F7; font-size: 11px; font-weight: 600; letter-spacing: 0.6px; text-transform: uppercase; color: #667085">
+<div>Space</div><div>Sign-in URL</div><div>Space admin</div><div>Platform API</div><div>Created</div><div style="text-align: right">Status</div>
+</div>
+<sc-if value="{{noSpaces}}" hint-placeholder-val="{{ true }}">
+<div style="padding: 48px 20px; display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center">
+<div style="font-size: 15px; font-weight: 600">No company spaces yet</div>
+<div style="font-size: 13px; line-height: 1.5; color: #667085; max-width: 380px">Create a space for each company. Its data stays isolated, and its admin connects it to the 3D Surgical Platform.</div>
+<button type="button" onClick="{{openCreate}}" style="margin-top: 6px; height: 40px; padding: 0 16px; border: 1px solid #D0D5DD; border-radius: 9px; background: #FFFFFF; font-family: 'IBM Plex Sans', sans-serif; font-size: 13.5px; font-weight: 600; color: #101828; cursor: pointer">Create company space</button>
+</div>
+</sc-if>
+<sc-for list="{{spaces}}" as="sp" hint-placeholder-count="0">
+<div style="display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1.9fr) minmax(0, 1.3fr) minmax(0, 1fr) minmax(0, 0.8fr) 120px; gap: 12px; align-items: center; padding: 14px 20px; border-bottom: 1px solid #F2F4F7; font-size: 13.5px">
+<div style="display: flex; flex-direction: column; gap: 2px; min-width: 0">
+<div style="font-weight: 600">{{sp.name}}</div>
+<div style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #667085">{{sp.slug}}</div>
+</div>
+<div style="display: flex; flex-direction: column; gap: 5px; min-width: 0"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 12.5px; color: #C4320A; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">{{sp.url}}</span><sc-if value="{{sp.hasDomain}}" hint-placeholder-val="{{ false }}"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11.5px; color: #667085; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">also {{sp.domain}}</span></sc-if><span style="display: flex; gap: 6px"><button type="button" onClick="{{sp.copy}}" style="height: 26px; padding: 0 9px; border: 1px solid #D0D5DD; border-radius: 6px; background: #FFFFFF; font-family: 'IBM Plex Sans', sans-serif; font-size: 11.5px; font-weight: 600; color: #344054; cursor: pointer">{{sp.copyLabel}}</button><button type="button" onClick="{{sp.open}}" style="height: 26px; padding: 0 9px; border: 1px solid #D0D5DD; border-radius: 6px; background: #FFFFFF; font-family: 'IBM Plex Sans', sans-serif; font-size: 11.5px; font-weight: 600; color: #344054; cursor: pointer">Open sign-in page ↗</button></span></div>
+<div style="color: #344054; overflow: hidden; text-overflow: ellipsis">{{sp.admin}}</div>
+<div style="display: flex; align-items: center; gap: 8px; color: #B54708"><div style="width: 8px; height: 8px; border-radius: 4px; background: #F79009"></div>Not connected</div>
+<div style="color: #667085">{{sp.created}}</div>
+<div style="display: flex; flex-direction: column; align-items: flex-end; gap: 6px"><span style="padding: 4px 10px; border-radius: 999px; background: {{sp.stBg}}; color: {{sp.stCol}}; font-size: 12px; font-weight: 600">{{sp.status}}</span><button type="button" onClick="{{sp.toggleStatus}}" style="height: 28px; padding: 0 10px; border: 1px solid #D0D5DD; border-radius: 7px; background: #FFFFFF; font-family: 'IBM Plex Sans', sans-serif; font-size: 12px; font-weight: 600; color: {{sp.actCol}}; cursor: pointer">{{sp.actLabel}}</button></div>
+</div>
+</sc-for>
+</section>
+</sc-if>
+
+<div style="display: {{casesDisplay}}">
+<dc-import name="Cases" page="{{casesPage}}" focus="{{casesFocus}}" on-parts-sync="{{onPartsSync}}" val-check="{{valCheck}}" user-name="{{userName}}" on-navigate="{{navigate}}" hint-size="100%,900px"></dc-import>
+</div>
+
+<div style="display: {{pmDisplay}}">
+<dc-import name="ProductionMaster" space-name="{{curName}}" tab="{{pmTab}}" nav-n="{{navN}}" user-name="{{userName}}" on-navigate="{{navigate}}" parts-snap="{{partsSnap}}" on-part-cmd="{{onPartCmd}}" on-val-sync="{{onValSync}}" hint-size="100%,900px"></dc-import>
+</div>
+
+<sc-if value="{{isAccount}}" hint-placeholder-val="{{ false }}">
+<div style="max-width: 720px; display: flex; flex-direction: column; gap: 20px">
+<section style="border: 1px solid #E4E7EC; border-radius: 14px; background: #FFFFFF; padding: 24px; display: flex; align-items: center; gap: 18px">
+<div style="width: 64px; height: 64px; border-radius: 32px; background: {{avatarBg}}; color: #FFFFFF; display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 600; flex: 0 0 auto">{{initials}}</div>
+<div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px">
+<h2 style="margin: 0; font-size: 18px; font-weight: 700; letter-spacing: -0.3px">{{userName}}</h2>
+<div style="font-size: 13.5px; color: #667085">{{email}}</div>
+</div>
+<div style="padding: 5px 10px; border-radius: 999px; background: #FFF1EB; color: #C4320A; font-size: 12px; font-weight: 600">{{roleLabel}}</div>
+</section>
+<section style="border: 1px solid #E4E7EC; border-radius: 14px; background: #FFFFFF; display: flex; flex-direction: column">
+<div style="padding: 16px 20px; border-bottom: 1px solid #F2F4F7; font-size: 15px; font-weight: 600">Account details</div>
+<div style="display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: 0; font-size: 13.5px">
+<div style="padding: 14px 20px; border-bottom: 1px solid #F2F4F7; color: #667085">Name</div><div style="padding: 14px 20px; border-bottom: 1px solid #F2F4F7">{{userName}}</div>
+<div style="padding: 14px 20px; border-bottom: 1px solid #F2F4F7; color: #667085">Email</div><div style="padding: 14px 20px; border-bottom: 1px solid #F2F4F7">{{email}}</div>
+<div style="padding: 14px 20px; border-bottom: 1px solid #F2F4F7; color: #667085">Role</div><div style="padding: 14px 20px; border-bottom: 1px solid #F2F4F7">{{roleLabel}}</div>
+<div style="padding: 14px 20px; color: #667085">Access</div><div style="padding: 14px 20px">{{accessLabel}}</div>
+</div>
+</section>
+<div style="display: flex; gap: 10px">
+<button type="button" onClick="{{signOut}}" style="height: 40px; padding: 0 16px; border: 1px solid #D0D5DD; border-radius: 9px; background: #FFFFFF; font-family: 'IBM Plex Sans', sans-serif; font-size: 13.5px; font-weight: 600; color: #101828; cursor: pointer">Sign out</button>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{isPlaceholder}}" hint-placeholder-val="{{ false }}">
+<div style="min-height: 100%; display: flex; align-items: center; justify-content: center">
+<div style="width: 440px; padding: 36px; border: 1px dashed #D0D5DD; border-radius: 14px; background: #FFFFFF; display: flex; flex-direction: column; gap: 8px; align-items: center; text-align: center">
+<div style="font-size: 11px; font-weight: 600; letter-spacing: 0.9px; text-transform: uppercase; color: #C4320A">Next to design</div>
+<div style="font-size: 20px; font-weight: 700; letter-spacing: -0.3px">{{pageTitle}}</div>
+<div style="font-size: 13px; line-height: 1.5; color: #667085">This page will be built from your requirements.</div>
+</div>
+</div>
+</sc-if>
+</main>
+</div>
+
+<sc-if value="{{modalOpen}}" hint-placeholder-val="{{ false }}">
+<div style="position: absolute; left: 0; top: 0; width: 100%; height: 100%; background: rgba(12, 21, 36, 0.55); display: flex; align-items: center; justify-content: center; z-index: 20">
+<div role="dialog" aria-modal="true" aria-labelledby="cs-title" style="width: 520px; background: #FFFFFF; border-radius: 14px; padding: 26px; display: flex; flex-direction: column; gap: 18px; box-sizing: border-box">
+<div style="display: flex; justify-content: space-between; align-items: flex-start">
+<div style="display: flex; flex-direction: column; gap: 4px">
+<h2 id="cs-title" style="margin: 0; font-size: 18px; font-weight: 700; letter-spacing: -0.3px">New company space</h2>
+<div style="font-size: 13px; color: #667085">An isolated workspace for one company.</div>
+</div>
+<button type="button" onClick="{{closeCreate}}" aria-label="Close" style="width: 40px; height: 40px; border: 0; border-radius: 8px; background: transparent; color: #667085; cursor: pointer; display: flex; align-items: center; justify-content: center">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"></path></svg>
+</button>
+</div>
+<div style="display: flex; flex-direction: column; gap: 6px">
+<label for="cs-name" style="font-size: 13px; font-weight: 600">Company name</label>
+<input id="cs-name" value="{{fName}}" onChange="{{onName}}" placeholder="e.g. Acme Orthopaedics" style="height: 42px; padding: 0 12px; border: 1px solid #D0D5DD; border-radius: 9px; font-family: 'IBM Plex Sans', sans-serif; font-size: 14px; box-sizing: border-box">
+</div>
+<div style="display: flex; flex-direction: column; gap: 6px">
+<label for="cs-slug" style="font-size: 13px; font-weight: 600">Space ID</label>
+<div style="display: flex; align-items: center; height: 42px; border: 1px solid #D0D5DD; border-radius: 9px; overflow: hidden">
+<input id="cs-slug" value="{{fSlug}}" onChange="{{onSlug}}" placeholder="acme-ortho" style="flex-grow: 1; height: 40px; padding: 0 12px; border: 0; outline: none; font-family: 'IBM Plex Mono', monospace; font-size: 13px">
+<div style="height: 40px; padding: 0 12px; display: flex; align-items: center; background: #F9FAFB; border-left: 1px solid #E4E7EC; font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #667085">{{domSuffix}}</div>
+</div>
+<span style="font-size: 12px; color: #667085">Space users sign in at <b style="font-family: 'IBM Plex Mono', monospace; color: #344054">{{fUrl}}</b></span>
+</div>
+<div style="display: flex; flex-direction: column; gap: 6px">
+<label for="cs-domain" style="font-size: 13px; font-weight: 600">Custom domain <span style="font-weight: 400; color: #667085">(optional)</span></label>
+<input id="cs-domain" value="{{fDomain}}" onChange="{{onDomain}}" placeholder="e.g. mms.acmeortho.com" style="height: 42px; padding: 0 12px; border: 1px solid #D0D5DD; border-radius: 9px; font-family: 'IBM Plex Mono', monospace; font-size: 13px; box-sizing: border-box">
+<span style="font-size: 12px; color: #667085">Point a CNAME record for this domain to {{fUrl}}.</span>
+</div>
+<div style="display: flex; flex-direction: column; gap: 6px">
+<label for="cs-admin" style="font-size: 13px; font-weight: 600">Space admin email</label>
+<input id="cs-admin" type="email" value="{{fAdmin}}" onChange="{{onAdmin}}" placeholder="admin@company.com" style="height: 42px; padding: 0 12px; border: 1px solid #D0D5DD; border-radius: 9px; font-family: 'IBM Plex Sans', sans-serif; font-size: 14px; box-sizing: border-box">
+</div>
+<sc-if value="{{fError}}" hint-placeholder-val="{{ false }}">
+<div role="alert" style="font-size: 13px; color: #B42318">{{fError}}</div>
+</sc-if>
+<div style="display: flex; justify-content: flex-end; gap: 10px; padding-top: 4px">
+<button type="button" onClick="{{closeCreate}}" style="height: 42px; padding: 0 18px; border: 1px solid #D0D5DD; border-radius: 9px; background: #FFFFFF; font-family: 'IBM Plex Sans', sans-serif; font-size: 13.5px; font-weight: 600; color: #101828; cursor: pointer">Cancel</button>
+<button type="button" onClick="{{createSpace}}" style="height: 42px; padding: 0 18px; border: 0; border-radius: 9px; background: #E24E1B; color: #FFFFFF; font-family: 'IBM Plex Sans', sans-serif; font-size: 13.5px; font-weight: 600; cursor: pointer">Create space</button>
+</div>
+</div>
+</div>
+</sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accountRole":{"editor":"enum","options":["admin","company"],"default":"admin"},"adminEmail":{"editor":null},"roleLabel":{"editor":null},"onSignOut":{"editor":null},"spaceId":{"editor":null},"$preview":{"width":"100%","height":"100%"}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    const dd = new Date();
+    const today = dd.getDate() + ' ' + ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][dd.getMonth()] + ' ' + dd.getFullYear();
+    this.state = { section: (props.accountRole ?? 'admin') !== 'company' ? 'spaces' : 'dashboard', current: props.spaceId || 'jajal-medical', spaceMenu: false, spaces: (props.spaces && props.spaces.length) ? props.spaces : [{ name: 'Jajal Medical', slug: 'jajal-medical', admin: 'admin@jajalmedical.com', created: today }], fDomain: '', copied: '', modal: false, fName: '', fSlug: '', fAdmin: '', fError: '', slugTouched: false, notifOpen: false, langOpen: false, lang: 'EN' };
+  }
+  renderVals() {
+    const s = this.state;
+    const isAdmin = (this.props.accountRole ?? 'admin') !== 'company'; const BASE = this.props.baseDomain || '3dsurgical.com';
+    const I = {
+      dashboard: 'M3 3h7v9H3zM14 3h7v5h-7zM14 12h7v9h-7zM3 16h7v5H3z',
+      grnlots: 'M4 6h16M4 12h16M4 18h10M18 16l2 2 3-3',
+      grnsetup: 'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z',
+      grn: 'M3 7h11v9H3zM14 10h4l3 3v3h-7M7 19a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM17 19a2 2 0 1 0 0-4 2 2 0 0 0 0 4z',
+      duedash: 'M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.8-3.8a6 6 0 0 1-7.9 7.9l-6.9 6.9a2.1 2.1 0 0 1-3-3l6.9-6.9a6 6 0 0 1 7.9-7.9z',
+      example: 'M4 19.5A2.5 2.5 0 0 1 6.5 17H20V3H6.5A2.5 2.5 0 0 0 4 5.5zM4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5M9 7h7M9 11h5',
+      orders: 'M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2M9 5a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2M9 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2M9 12h6M9 16h4',
+      tasks: 'M9 11l3 3L22 4M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11',
+      schedule: 'M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z',
+      implants: 'M4 7c3-3 13-3 16 0v4c-3 3-13 3-16 0zM8 14v5M16 14v5',
+      models: 'M12 3l8 4.5v9L12 21l-8-4.5v-9zM4 7.5l8 4.5 8-4.5M12 12v9',
+      jigs: 'M4 16l8-12 8 12zM4 20h16',
+      quality: 'M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10zM9 12l2 2 4-4',
+      spaces: 'M3 21h18M5 21V7l7-4 7 4v14M9 21v-6h6v6',
+      users: 'M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM22 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8',
+      api: 'M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7',
+      settings: 'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z',
+      activity: 'M12 8v4l3 3M3 12a9 9 0 1 0 18 0 9 9 0 0 0-18 0z',
+      maintplan: 'M8 2v4M16 2v4M3 8h18M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2zM14.5 13.5l-3 3-1.5-1.5',
+      audit: 'M9 2h6a1 1 0 0 1 1 1v2H8V3a1 1 0 0 1 1-1zM8 4H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-2M8 11h8M8 15h8M8 19h5',
+      production: 'M2 20h20M4 20V9l5 3V9l5 3V9l5 3v8M17 4v5',
+      printers: 'M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v8H6z',
+      materials: 'M12 2 2 7l10 5 10-5-10-5zM2 12l10 5 10-5',
+      tech: 'M12 2v4M12 18v4M4.9 4.9l2.8 2.8M16.3 16.3l2.8 2.8M2 12h4M18 12h4M4.9 19.1l2.8-2.8M16.3 7.7l2.8-2.8M12 16a4 4 0 1 0 0-8 4 4 0 0 0 0 8z',
+      parttypes: 'M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z',
+      measuring: 'M2 17 17 2l5 5L7 22zM7.5 11.5l2 2M10.5 8.5l2 2M13.5 5.5l2 2',
+      postproc: 'M12 2c1 3 4 4 4 8a4 4 0 0 1-8 0c0-2 1-3 1-3 .5 1.5 1.5 2 2 2 0-3-1-4 1-7zM5 22h14',
+      steril: 'M9 3h6M10 3v6l-5 9a2 2 0 0 0 1.7 3h10.6a2 2 0 0 0 1.7-3l-5-9V3M7.5 14h9',
+      components: 'M14 4l6 6-9 9H5v-6zM9 9l6 6',
+      packaging: 'M21 8 12 3 3 8v8l9 5 9-5zM3 8l9 5 9-5M12 13v8',
+      tooling: 'M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.8-3.8a6 6 0 0 1-7.9 7.9l-6.9 6.9a2.1 2.1 0 0 1-3-3l6.9-6.9a6 6 0 0 1 7.9-7.9z',
+      software: 'M2 4h20v12H2zM8 20h8M12 16v4M8 9l-2 2 2 2M16 9l2 2-2 2',
+      params: 'M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0M14 4v4M8 10v4M16 16v4',
+      operators: 'M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM17 11l2 2 4-4',
+      vendors: 'M1 3h15v13H1zM16 8h4l3 3v5h-7zM5.5 21a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5zM18.5 21a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z',
+      cases: 'M12 2 2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5',
+      qaforms: 'M9 2h6a1 1 0 0 1 1 1v2H8V3a1 1 0 0 1 1-1zM8 4H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-2M9 13l2 2 4-4',
+      partsetup: 'M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6',
+      parts: 'M21 16V8a2 2 0 0 0-1-1.7l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.7l7 4a2 2 0 0 0 2 0l7-4a2 2 0 0 0 1-1.7zM3.3 7 12 12l8.7-5M12 22V12'
+    };
+    const PM_SECS = { grn: 'grn', grnlots: 'grnlots', grnsetup: 'grnsetup', dashboard: 'control', duedash: 'control', production: 'workflows', printers: 'printers', materials: 'materials', tech: 'tech', parttypes: 'types', vendors: 'vendors', measuring: 'measuring', postproc: 'postproc', steril: 'steril', components: 'components', packaging: 'packaging', tooling: 'tooling', software: 'software', params: 'params', operators: 'operators', audit: 'audit' };
+    const PAGES = {
+      dashboard: ['Dashboard', 'Parts, live resources and everything due — in one place'],
+      duedash: ['Maintenance Dashboard', 'Maintenance, calibration, qualification and other due items'],
+      example: ['Example: Cranial Plate', 'End-to-end walkthrough — FDM skull model, SLS prototype and titanium DMLS plate'],
+      orders: ['Work Orders', 'Track every device from order to shipment'],
+      tasks: ['Tasks', 'Assign, track and follow up on case & part tasks'],
+      schedule: ['Schedule', 'Production and delivery calendar'],
+      implants: ['Custom Implants', 'Patient-specific implant builds'],
+      models: ['Anatomical Models', '3D-printed anatomical models'],
+      jigs: ['Jigs & Guides', 'Surgical jigs, cutting and drilling guides'],
+      quality: ['Quality Records', 'Inspections, deviations and release records'],
+      audit: ['Audit Log', 'Time-stamped audit trail — archive & deletion approvals, qualification, validation and change control'],
+      spaces: ['Company Spaces', 'Create, configure and suspend company spaces — each with its own sign-in URL'],
+      users: isAdmin ? ['Platform Admins', 'Who can sign in to the admin console and what they can do'] : ['Users & Roles', 'Accounts and permissions'],
+      api: isAdmin ? ['Integrations & API', 'Platform-wide connection to the 3D Surgical Platform for all spaces'] : ['Integrations & API', 'Connect to the 3D Surgical Platform'],
+      settings: [isAdmin ? 'Platform Settings' : 'Space Settings', isAdmin ? 'Platform-wide configuration' : 'Configuration for this space'],
+      activity: isAdmin ? ['Admin Activity Log', 'Spaces created, suspended and changed — time-stamped'] : ['Activity Log', 'Every action, time-stamped'],
+      account: ['Account', 'Your profile and security settings'],
+      production: ['Manufacturing Workflow Setup', 'Workflows and their production stages'],
+      printers: ['Printers & Machines', 'Printers, CNC machines and their status'],
+      materials: ['Materials', 'Materials, lots and stock levels'],
+      tech: ['Manufacturing Tech', 'Manufacturing technologies and processes'],
+      parttypes: ['Part Types', 'Part types available in part requests'],
+      vendors: ['Suppliers & Vendors', 'Approved supplier list — manufacturers, materials, labs and contractors'],
+      tooling: ['Tooling & Fixtures', 'Build plates, cutters and fixtures with usage life'],
+      software: ['Software & Versions', 'Validated software and periodic review'],
+      params: ['Process Parameters', 'Validated machine + material parameter sets'],
+      operators: ['Operator Qualifications', 'Training and qualification by machine and process'],
+      measuring: ['Measuring Equipment', 'Calibrated inspection instruments and calibration schedule'],
+      postproc: ['Post-processing Equipment', 'Furnaces, EDM, blasting, cleaning and finishing equipment'],
+      steril: ['Sterilization', 'Validated sterilization methods and cycles'],
+      components: ['Standard Components', 'Screws, sleeves, pins and instruments — lot and stock'],
+      grn: ['GRN List', 'Receive, inspect and accept deliveries into stock'],
+      grnlots: ['Lot List', 'Every lot received — status, stock, log and the parts made from it'],
+      grnsetup: ['GRN Setup', 'Numbering, receipt fields, lot IDs, acceptance tests and rules'],
+      packaging: ['Packaging & Labelling', 'Sterile barrier, trays, labels and IFUs'],
+      cases: ['Cases', 'Browse, filter and open cases'],
+      qaforms: ['QA Form Setup', 'Configurable QA checklists with variables that fetch part, case and request data'],
+      partsetup: ['Part Request Setup', 'Part ID rule and request-part form — with live preview'],
+      parts: ['Parts', 'All manufactured parts across cases — status, material and traceability']
+    };
+    const sections = isAdmin ? [
+      { title: 'Platform', items: ['spaces', 'users', 'api', 'settings', 'activity'] }
+    ] : [
+      { title: 'Workspace', items: ['dashboard', 'cases', 'parts', 'tasks', 'schedule'] },
+      { title: 'Quality', items: ['quality', 'audit'] },
+      { title: 'Setup', items: ['production', 'partsetup', 'qaforms'] },
+      { title: 'Equipment', items: ['printers', 'postproc', 'measuring', 'tooling', 'steril'] },
+      { title: 'Materials & Supply', items: ['materials', 'components', 'packaging', 'vendors'] },
+      { title: 'Goods Receipt', items: ['grn', 'grnlots', 'grnsetup'] },
+      { title: 'Process & People', items: ['params', 'software', 'operators', 'tech', 'parttypes'] },
+      { title: 'Space', items: ['users', 'api', 'settings'] }
+    ];
+    const ADMIN_OK = ['spaces', 'users', 'api', 'settings', 'activity', 'account']; const go = (id) => { if (isAdmin && !ADMIN_OK.includes(id)) return; this.setState({ navN: (s.navN || 0) + 1, section: id, notifOpen: false, langOpen: false, spaceMenu: false }); };
+    const navSections = sections.map((sec) => ({
+      title: sec.title,
+      items: sec.items.map((id) => {
+        const on = s.section === id;
+        return { id, label: PAGES[id][0], icon: I[id], pick: () => go(id), current: on ? 'page' : 'false',
+          bg: on ? 'rgba(255,255,255,.07)' : 'transparent', color: on ? '#FF8A5C' : '#A5B2C4', weight: on ? '600' : '500',
+          bar: on ? '#FF8A5C' : 'transparent', padLeft: on ? '9px' : '12px' };
+      })
+    }));
+    const page = PAGES[s.section] || PAGES.dashboard;
+    const curSpace = s.spaces.find((x) => x.slug === s.current) || s.spaces[0];
+    const curName = curSpace ? curSpace.name : 'No space';
+    const roleLabel = this.props.roleLabel ?? (isAdmin ? 'Super Admin' : 'Space Admin');
+    const userName = isAdmin ? 'Platform Admin' : 'Space Admin';
+    const LANGS = [['English', 'EN'], ['हिन्दी', 'HI'], ['Deutsch', 'DE'], ['Español', 'ES']];
+    const n = s.spaces.length;
+    const slugify = (v) => v.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40);
+    const openCreate = () => this.setState({ modal: true, fName: '', fSlug: '', fAdmin: '', fDomain: '', fError: '', slugTouched: false, notifOpen: false, langOpen: false });
+    return {
+      navSections,
+      pageTitle: page[0],
+      pageSubtitle: s.section === 'dashboard' ? curName + ' · overview' : page[1],
+      curName,
+      curInitials: curName.split(' ').slice(0, 2).map((w) => w[0]).join('').toUpperCase(),
+      canSwitch: false,
+      spaceCursor: 'default',
+      spaceMenuOpen: false,
+      spaceMenuExpanded: s.spaceMenu ? 'true' : 'false',
+      toggleSpaceMenu: () => { if (isAdmin) this.setState({ spaceMenu: !s.spaceMenu, notifOpen: false, langOpen: false }); },
+      manageSpaces: () => this.setState({ section: 'spaces', spaceMenu: false }),
+      spaceItems: s.spaces.map((x) => ({ ...x, current: x.slug === s.current, bg: x.slug === s.current ? '#FFF1EB' : 'transparent', pick: () => this.setState({ current: x.slug, spaceMenu: false, section: 'dashboard' }) })),
+      pdb: (() => { const now = new Date(); now.setHours(0, 0, 0, 0); const snap = s.partsSnap || []; const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        const fo = (sec, f) => () => this.setState({ section: sec, casesFocus: f + '#' + Date.now(), notifOpen: false, langOpen: false, spaceMenu: false });
+        const days = (iso) => { if (!iso) return null; const d = new Date(iso + 'T00:00:00'); return isNaN(d) ? null : Math.round((d - now) / 86400000); };
+        const arch = (p) => /archiv|cancel/i.test(p.caseState || ''); const done = (p) => p.stageIdx >= p.last;
+        const act = snap.filter((p) => !arch(p) && !done(p)); const comp = snap.filter((p) => !arch(p) && done(p));
+        const od = act.filter((p) => { const d = days(p.due); return d !== null && d < 0; }); const d7 = act.filter((p) => { const d = days(p.due); return d !== null && d >= 0 && d <= 7; });
+        const prnt = act.filter((p) => p.printing); const pend = act.reduce((n, p) => n + (p.formsPending || []).length, 0);
+        const openPart = (p) => fo('parts', 'part:' + p.caseId + ':' + p.idx + ':current');
+        const K = (label, n, sub, color, fn) => ({ label, n: String(n), sub, color: n && color ? color : '#101828', pick: fn });
+        const PH = [['Request', /request|received/i, '#98A2B3'], ['Design & build prep', /design|segment|plan|prep|nest|slic|cam|queued|sent to vendor/i, '#7A5AF8'], ['Build / machining', /print|machin|build/i, '#E24E1B'], ['Post-processing', /heat|support|depowder|finish|post|wash|cure|cleanup|remov/i, '#F79009'], ['Inspection & QC', /inspect|qc|test/i, '#2E90FA'], ['Cleaning, sterile & pack', /clean|steril|pack|dispatch|label/i, '#12B76A']];
+        const phaseOf = (n) => { for (let i = 0; i < PH.length; i++) if (PH[i][1].test(n || '')) return i; return 1; };
+        const phN = PH.map(() => 0); act.forEach((p) => { phN[phaseOf(p.stage)]++; }); const phMax = Math.max(1, ...phN);
+        const tally = (arr, key) => { const m = {}; arr.forEach((p) => { const k = p[key] || '—'; m[k] = (m[k] || 0) + 1; }); const out = Object.keys(m).map((k) => ({ k, n: m[k] })).sort((a, b) => b.n - a.n); const mx = Math.max(1, ...out.map((o) => o.n)); return out.slice(0, 6).map((o) => ({ label: o.k, n: String(o.n), w: Math.round((o.n / mx) * 100) + '%' })); };
+        const mach = {}; act.forEach((p) => { if (!p.printer) return; const m = mach[p.printer] || (mach[p.printer] = { q: 0, pr: 0, post: 0 }); if (p.printing) m.pr++; else if (p.queued) m.q++; else m.post++; });
+        const machRows = Object.keys(mach).map((k) => ({ label: k, printing: String(mach[k].pr), queued: String(mach[k].q), after: String(mach[k].post), prColor: mach[k].pr ? '#E24E1B' : '#98A2B3', total: mach[k].pr + mach[k].q })).sort((a, b) => b.total - a.total);
+        const buckets = [['Overdue', (d) => d !== null && d < 0, '#B42318'], ['This week', (d) => d !== null && d >= 0 && d <= 7, '#B54708'], ['Next week', (d) => d !== null && d > 7 && d <= 14, '#175CD3'], ['Later', (d) => d !== null && d > 14, '#067647'], ['No due date', (d) => d === null, '#98A2B3']].map(([l, f, c]) => { const n = act.filter((p) => f(days(p.due))).length; return { label: l, n: String(n), color: n ? c : '#98A2B3', w: Math.round((n / Math.max(1, act.length)) * 100) + '%', bar: c }; });
+        const dueRows = act.filter((p) => days(p.due) !== null && days(p.due) <= 14).sort((a, b) => days(a.due) - days(b.due)).slice(0, 8).map((p) => { const d = days(p.due); return { pid: p.pid, name: p.name, sub: (p.partType || '—') + ' · ' + p.caseId, stage: p.stage, due: p.due, rel: d < 0 ? 'Overdue ' + (-d) + 'd' : d === 0 ? 'Today' : 'In ' + d + 'd', relColor: d < 0 ? '#B42318' : d <= 3 ? '#B54708' : '#475467', who: p.assignee || 'Unassigned', whoColor: p.assignee ? '#344054' : '#B54708', open: openPart(p) }; });
+        const att = []; od.forEach((p) => att.push({ lvl: 0, tag: 'Overdue', text: p.pid + ' — due ' + p.due + ' · at ' + p.stage, open: openPart(p) }));
+        act.filter((p) => !p.assignee).forEach((p) => att.push({ lvl: 1, tag: 'Unassigned', text: p.pid + ' — ' + p.stage + ' has no owner', open: openPart(p) }));
+        act.forEach((p) => (p.formsPending || []).forEach((fn) => att.push({ lvl: 1, tag: 'Form to approve', text: p.pid + ' — ' + fn, open: fo('parts', 'part:' + p.caseId + ':' + p.idx + ':forms') })));
+        const attShown = att.sort((a, b) => a.lvl - b.lvl).slice(0, 8).map((a) => ({ ...a, bg: a.lvl === 0 ? '#FEF3F2' : '#FFFAEB', color: a.lvl === 0 ? '#B42318' : '#B54708' }));
+        const tsn = (at) => { const m = String(at || '').match(/([A-Z][a-z]{2})\s+(\d+)\D+(\d+):(\d+)/); return m ? MON.indexOf(m[1]) * 1e6 + +m[2] * 1e4 + +m[3] * 100 + +m[4] : 0; };
+        const ev = []; snap.forEach((p) => (p.stages || []).forEach((n, k) => { const at = (p.stageAt || [])[k]; if (k < p.stageIdx && at) ev.push({ t: tsn(at), when: at, pid: p.pid, text: n + ' completed', by: (p.stageBy || [])[k] || '', open: openPart(p) }); }));
+        const recent = ev.sort((a, b) => b.t - a.t).slice(0, 8);
+        const QA = (label, sub, icon, fn, primary) => ({ label, sub, icon, go: fn, bg: primary ? '#E24E1B' : '#FFFFFF', color: primary ? '#FFFFFF' : '#101828', subColor: primary ? 'rgba(255,255,255,.8)' : '#667085', border: primary ? '#E24E1B' : '#E4E7EC', iconBg: primary ? 'rgba(255,255,255,.18)' : '#FFF1EB', iconColor: primary ? '#FFFFFF' : '#E24E1B' });
+        return {
+          newPart: fo('parts', 'newpart'),
+          quick: [QA('New part request', 'Add a part to a case', 'M12 5v14M5 12h14', fo('parts', 'newpart'), true), QA('All parts', act.length + ' active', 'M12 3l8 4.5v9L12 21l-8-4.5v-9zM4 7.5l8 4.5 8-4.5M12 12v9', () => go('parts')), QA('Cases', 'Browse and open cases', 'M12 2 2 7l10 5 10-5zM2 17l10 5 10-5M2 12l10 5 10-5', () => go('cases')), QA('My tasks', 'Stage tasks assigned to you', 'M9 11l3 3L22 4M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11', () => go('tasks')), QA('Quality records', pend + (pend === 1 ? ' form' : ' forms') + ' awaiting approval', 'M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z', () => go('quality')), QA('Maintenance dashboard', 'Equipment & compliance due', 'M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.8-3.8a6 6 0 0 1-7.9 7.9l-6.9 6.9a2.1 2.1 0 0 1-3-3l6.9-6.9a6 6 0 0 1 7.9-7.9z', () => go('duedash'))],
+          kpis: [K('Active parts', act.length, 'Across ' + new Set(act.map((p) => p.caseId)).size + ' cases', '', () => go('parts')), K('Building now', prnt.length, 'On a printer or machine', '#E24E1B', () => go('parts')), K('Due in 7 days', d7.length, 'Plan and prioritise', '#B54708', () => go('parts')), K('Overdue', od.length, 'Past the due date', '#B42318', () => go('parts')), K('Completed', comp.length, 'Reached the last stage', '#067647', () => go('parts')), K('Forms to approve', pend, 'Filled, waiting for QA', '#175CD3', () => go('quality'))],
+          phases: PH.map((ph, i) => ({ label: ph[0], n: String(phN[i]), w: Math.round((phN[i] / phMax) * 100) + '%', color: ph[2] })),
+          buckets, byType: tally(act, 'partType'), byTech: tally(act, 'material'), byWf: tally(act, 'wfName'), machRows, noMach: !machRows.length,
+          dueRows, noDue: !dueRows.length, att: attShown, attMore: att.length > 8 ? '+ ' + (att.length - 8) + ' more on the Parts page' : '', hasAttMore: att.length > 8, noAtt: !att.length,
+          recent, noRecent: !recent.length, empty: !snap.length };
+      })(),
+      isDashboard: false, isExample: s.section === 'example',
+      ex: (() => {
+        const fo = (sec, f) => () => this.setState({ section: sec, casesFocus: f + '#' + Date.now(), notifOpen: false, langOpen: false, spaceMenu: false });
+        const g = (sec) => () => go(sec);
+        const A = (label, fn) => ({ label, go: fn });
+        const S = (num, phase, state, title, body, facts, actions) => { const c = state === 'Done' ? ['#ECFDF3', '#067647'] : state === 'In progress' ? ['#FFF1EB', '#C4320A'] : ['#F2F4F7', '#475467']; return { num, phase, state, title, body, facts, actions, dotBg: c[0], dotColor: c[1] }; };
+        return {
+          openCase: fo('cases', 'case:JM-0430:info'),
+          facts: [{ label: 'Patient', value: 'R. Kulkarni' }, { label: 'Surgeon · hospital', value: 'Dr. R. Mehta · Sunrise Dental Hospital' }, { label: 'Surgery date', value: '2026-10-09' }, { label: 'Case status', value: 'Manufacturing · High priority' }],
+          parts: [
+            { tag: '1 · FDM · PLANNING MODEL', name: 'Skull model — defect region', pid: 'JM-CRANIO-0430-01', line: 'Ultimaker S5 · PLA lot PLA-2409-03 · non-sterile', status: 'Dispatched', stBg: '#ECFDF3', stColor: '#067647', accent: '#067647', open: fo('parts', 'part:JM-0430:0:stages') },
+            { tag: '2 · SLS · PROTOTYPE', name: 'Cranial plate prototype (fit check)', pid: 'JM-CRANIO-0430-02', line: 'EOS Formiga P 110 · PA12 lot PA12-2407-11 · fit approved', status: 'Fit approved', stBg: '#ECFDF3', stColor: '#067647', accent: '#067647', open: fo('parts', 'part:JM-0430:1:forms') },
+            { tag: '3 · DMLS · FINAL IMPLANT', name: 'Patient-specific cranial plate — titanium', pid: 'JM-CRANIO-0430-03', line: 'EOS M 290 · Ti-6Al-4V ELI lot TI64-2406-A · at Inspection & QC', status: 'Inspection & QC', stBg: '#FFF1EB', stColor: '#C4320A', accent: '#E24E1B', open: fo('parts', 'part:JM-0430:2:forms') } ],
+          steps: [
+            S(1, 'ONE-TIME SETUP', 'Done', 'Set up workflows, the part request form and QA forms', 'Three manufacturing workflows are used: Model / Prototype — FDM (6 stages), Model / Prototype — SLS (PA12) (7 stages) and Titanium Implant — DMLS (9 stages). The part request form collects priority, material, notes, print files and the balloon drawing. QA forms attach to stages automatically: Polymer Build Record → FDM/SLS printing, BMR → DMLS printing, Final Inspection → every QC stage, Sterilization Checklist and Device History Record → sterilization and dispatch.', ['3 workflows', 'Part ID rule JM-{PRODUCT}-{CASE_SEQ}-{PART_SEQ}', '5 QA forms'], [A('Workflows', g('production')), A('Part Request Setup', g('partsetup')), A('QA Form Setup', g('qaforms'))]),
+            S(2, 'ONE-TIME SETUP', 'Done', 'Register resources: machines, materials, parameters and people', 'Each technology has a machine, a lot-tracked material and a validated parameter set. Post-processing, measuring and sterilization equipment carry calibration / validation dates; operators are qualified per machine.', ['Ultimaker S5 · EOS Formiga P 110 · EOS M 290', 'PLA/PETG · PA12 · Ti-6Al-4V ELI', 'PPS-FDM-PETG-01 · PPS-SLS-PA12-01 · PPS-DMLS-TI-01', 'Ravi Patel · Neha Shah · Pooja Desai'], [A('Printers & Machines', g('printers')), A('Materials', g('materials')), A('Process Parameters', g('params')), A('Operator Qualifications', g('operators'))]),
+            S(3, 'CASE', 'Done', 'Case JM-0430 created and design approved', 'The sales rep creates the cranial plate case; CT data from Vadodara Imaging Centre is reviewed, segmented and the plate is designed. After surgeon design approval the case moves to Manufacturing.', ['Case Created → Scan Review → Segmentation → Design → Design Approval → Manufacturing'], [A('Case info', fo('cases', 'case:JM-0430:info')), A('Case status', fo('cases', 'case:JM-0430:status')), A('Case activity', fo('cases', 'case:JM-0430:activity'))]),
+            S(4, 'PART REQUESTS', 'Done', 'Three parts requested from the case Manufacturing tab', 'The part request form doubles as the QAC (Quality Plan & Acceptance Criteria, JM-F-DND-004): each request records dimensions, polishing and the 10 requirement sections (Dimensional, Material, Workmanship… each with its feature, specification and testing / acceptance method), and those values feed the QA forms as {request.…} variables. Each request picks a workflow and gets a part ID from the ID rule. Stage tasks and stage QA forms are created automatically — the first is the QAC form at Request received, prepared by the design engineer and approved before the part can move to production. The titanium plate request carries the inspection drawing with 5 balloon characteristics (thickness, hole Ø, length, width, hole pitch).', ['JM-CRANIO-0430-01 · FDM', 'JM-CRANIO-0430-02 · SLS', 'JM-CRANIO-0430-03 · DMLS', 'QAC form JM-F-DND-004 approved at Request received', '5 balloons with LSL / USL'], [A('Manufacturing tab', fo('cases', 'case:JM-0430:mfg')), A('Tasks', g('tasks'))]),
+            S(5, 'PART 1 · FDM', 'Done', 'Skull model printed on FDM and released', 'Sliced with PPS-FDM-PETG-01, printed on the Ultimaker S5 from PLA lot PLA-2409-03 (0.3 spool drawn). Polymer Build Record and Final Inspection (visual) approved by Ravi Patel and Neha Shah; Device History Record closed and the model handed over for the prototype fit check.', ['Polymer Build Record ✓', 'Final Inspection ✓', 'DHR ✓', 'Material draw logged'], [A('Part stages', fo('parts', 'part:JM-0430:0:stages')), A('Quality forms', fo('parts', 'part:JM-0430:0:forms'))]),
+            S(6, 'PART 2 · SLS', 'Done', 'Nylon prototype printed on SLS and fit-checked on the skull model', 'Printed on the EOS Formiga P 110 with PPS-SLS-PA12-01 from PA12 lot PA12-2407-11. Final Inspection measured length and width against the drawing and recorded the fit check on JM-CRANIO-0430-01; the surgeon approved the prototype, releasing the titanium build.', ['Length 96.2 mm ✓', 'Width 71.9 mm ✓', 'Fit on skull model ✓', 'Surgeon approval task done'], [A('Prototype quality forms', fo('parts', 'part:JM-0430:1:forms')), A('Prototype activity', fo('parts', 'part:JM-0430:1:activity'))]),
+            S(7, 'PART 3 · DMLS', 'In progress', 'Titanium plate printed, heat-treated — now in Inspection & QC', 'Built on the EOS M 290 with PPS-DMLS-TI-01 rev B from Ti-6Al-4V ELI lot TI64-2406-A (BMR approved: 30 µm layers, O₂ 0.08 %). Stress-relieved in the Nabertherm vacuum furnace (PPS-HT-TI-01), supports removed. Neha Shah is measuring the 5 balloons on the Zeiss Contura CMM — 3 of 5 entered, all within spec so far.', ['BMR ✓', 'Heat treatment ✓', 'Final Inspection 3 / 5 measured', 'CMM QC-CMM-01 calibrated'], [A('Open inspection form', fo('parts', 'part:JM-0430:2:forms')), A('Part stages', fo('parts', 'part:JM-0430:2:stages')), A('Measuring Equipment', g('measuring')), A('Post-processing', g('postproc'))]),
+            S(8, 'NEXT', 'Upcoming', 'Sterilize, pack, release with the DHR and ship', 'When inspection is approved the plate moves to Cleaning & sterilization (cycle STE-PV-134, 134 °C prevacuum, validated to ISO 17665), is sealed in a sterile barrier pouch with a UDI label and IFU, and the Device History Record is signed for release. The case then moves to QA & Sterilization and Shipped.', ['Sterilization Checklist', 'Pouch lot AM-26-4410 / UDI label', 'Device History Record', 'Ship to Sunrise Dental Hospital'], [A('Sterilization', g('steril')), A('Packaging & Labelling', g('packaging')), A('Standard Components', g('components'))])
+          ],
+          traceHead: ['PART', 'WORKFLOW', 'MACHINE', 'MATERIAL LOT', 'PARAMETER SET', 'OPERATOR / QC', 'INSPECTION', 'STERILE / PACK'],
+          trace: [
+            { cells: ['JM-CRANIO-0430-01 · Skull model', 'Model / Prototype — FDM', 'Ultimaker S5', 'PLA-2409-03', 'PPS-FDM-PETG-01 rev A', 'Ravi Patel / Neha Shah', 'Visual — approved', 'Non-sterile · bagged'] },
+            { cells: ['JM-CRANIO-0430-02 · Prototype plate', 'Model / Prototype — SLS (PA12)', 'EOS Formiga P 110', 'PA12-2407-11', 'PPS-SLS-PA12-01 rev A', 'Ravi Patel / Neha Shah', 'Caliper QC-CAL-04 + fit check — approved', 'Non-sterile · not for implantation'] },
+            { cells: ['JM-CRANIO-0430-03 · Titanium plate', 'Titanium Implant — DMLS', 'EOS M 290 · Nabertherm furnace', 'TI64-2406-A', 'PPS-DMLS-TI-01 rev B · PPS-HT-TI-01', 'Ravi Patel / Neha Shah', 'Zeiss CMM QC-CMM-01 — in progress (3/5)', 'STE-PV-134 · pouch + UDI label (next)'] } ]
+        };
+      })(),
+      isSpaces: s.section === 'spaces',
+      isPlaceholder: s.section !== 'dashboard' && s.section !== 'example' && s.section !== 'spaces' && s.section !== 'account' && !PM_SECS[s.section] && s.section !== 'cases' && s.section !== 'tasks' && s.section !== 'parts' && s.section !== 'partsetup' && s.section !== 'qaforms',
+      casesDisplay: s.section === 'cases' || s.section === 'tasks' || s.section === 'parts' || s.section === 'partsetup' || s.section === 'qaforms' ? 'block' : 'none',
+      onPartCmd: (c, nav) => this.setState({ casesFocus: c + '#' + Date.now(), ...(nav ? { section: nav, notifOpen: false } : {}) }), casesFocus: s.casesFocus || '', partsSnap: s.partsSnap || [], onPartsSync: (list) => this.setState({ partsSnap: list }), valCheck: s.valCheck || null, onValSync: (x) => this.setState({ valCheck: x }),
+      casesPage: s.section === 'tasks' || s.section === 'parts' || s.section === 'partsetup' || s.section === 'qaforms' ? s.section : 'cases',
+      navigate: (id) => go(id),
+      navN: s.navN || 0, pmDisplay: PM_SECS[s.section] ? 'block' : 'none', pmTab: PM_SECS[s.section] || 'workflows',
+      isAccount: s.section === 'account',
+      email: this.props.adminEmail ?? 'admin@3dsurgical.com',
+      accessLabel: isAdmin ? 'All company spaces (currently in ' + curName + ')' : curName + ' only',
+      userName,
+      roleLabel,
+      initials: isAdmin ? 'PA' : 'SA',
+      avatarBg: isAdmin ? '#E24E1B' : '#1570EF',
+      accountBg: s.section === 'account' ? 'rgba(255,255,255,.07)' : 'transparent',
+      goAccount: () => go('account'),
+      signOut: () => { if (typeof this.props.onSignOut === 'function') this.props.onSignOut(); },
+      notifOpen: s.notifOpen,
+      notifExpanded: s.notifOpen ? 'true' : 'false',
+      toggleNotif: () => this.setState({ notifOpen: !s.notifOpen, langOpen: false }),
+      langOpen: s.langOpen,
+      langExpanded: s.langOpen ? 'true' : 'false',
+      langCode: s.lang,
+      toggleLang: () => this.setState({ langOpen: !s.langOpen, notifOpen: false }),
+      langs: LANGS.map(([label, code]) => ({ label, code, bg: s.lang === code ? '#FFF1EB' : 'transparent', color: s.lang === code ? '#C4320A' : '#344054', pick: () => this.setState({ lang: code, langOpen: false }) })),
+      primaryLabel: isAdmin ? 'New Company Space' : 'New Case',
+      primaryAction: isAdmin ? openCreate : () => go('cases'),
+      spaces: s.spaces.map((x) => { const u = x.slug + '.' + BASE; return { ...x, url: u, hasDomain: !!x.domain, domain: x.domain || '', copyLabel: s.copied === x.slug ? 'Copied ✓' : 'Copy link', copy: () => { try { navigator.clipboard.writeText('https://' + u); } catch (e0) { /* ignore */ } this.setState({ copied: x.slug }); setTimeout(() => this.setState({ copied: '' }), 1600); }, open: () => { if (typeof this.props.onOpenUrl === 'function') this.props.onOpenUrl(x.slug); }, status: x.status || 'Active', stBg: x.status === 'Suspended' ? '#FEF3F2' : '#ECFDF3', stCol: x.status === 'Suspended' ? '#B42318' : '#067647', actLabel: x.status === 'Suspended' ? 'Reactivate' : 'Suspend', actCol: x.status === 'Suspended' ? '#067647' : '#B42318', toggleStatus: () => { const list = s.spaces.map((z) => (z.slug === x.slug ? { ...z, status: z.status === 'Suspended' ? 'Active' : 'Suspended' } : z)); this.setState({ spaces: list }); if (typeof this.props.onSpacesChange === 'function') this.props.onSpacesChange(list); } }; }),
+      domSuffix: '.' + BASE, fUrl: (s.fSlug || 'your-space') + '.' + BASE, fDomain: s.fDomain || '', onDomain: (e) => this.setState({ fDomain: e.target.value.trim().toLowerCase(), fError: '' }),
+      sideKicker: isAdmin ? 'Admin console' : 'Company space', sideName: isAdmin ? '3D Surgical platform' : curName, sideInit: isAdmin ? 'AD' : curName.split(' ').slice(0, 2).map((w) => w[0]).join('').toUpperCase(), sideAvBg: isAdmin ? '#E24E1B' : '#1570EF',
+      hostText: isAdmin ? 'admin.' + BASE : (curSpace ? curSpace.slug : '') + '.' + BASE,
+      hostTitle: isAdmin ? 'Platform admin console — manage all company spaces' : 'Your company space address', hostBg: isAdmin ? '#F2F4F7' : '#FFFFFF', hostBorder: isAdmin ? '#D0D5DD' : '#E4E7EC',
+      noSpaces: n === 0,
+      spaceCountLabel: n === 1 ? '1 space' : n + ' spaces',
+      modalOpen: s.modal,
+      fName: s.fName, fSlug: s.fSlug, fAdmin: s.fAdmin, fError: s.fError,
+      openCreate,
+      closeCreate: () => this.setState({ modal: false }),
+      onName: (e) => { const v = e.target.value; this.setState({ fName: v, fSlug: s.slugTouched ? s.fSlug : slugify(v), fError: '' }); },
+      onSlug: (e) => this.setState({ fSlug: slugify(e.target.value), slugTouched: true, fError: '' }),
+      onAdmin: (e) => this.setState({ fAdmin: e.target.value, fError: '' }),
+      createSpace: () => {
+        const name = s.fName.trim();
+        const admin = s.fAdmin.trim();
+        if (!name) { this.setState({ fError: 'Enter a company name.' }); return; }
+        if (!s.fSlug) { this.setState({ fError: 'Enter a space ID.' }); return; }
+        if (s.spaces.some((x) => x.slug === s.fSlug) || ['admin', 'www', 'api', 'app', 'mail'].includes(s.fSlug)) { this.setState({ fError: 'That space ID is already taken or reserved.' }); return; }
+        if (s.fDomain && !/^[a-z0-9-]+(\.[a-z0-9-]+)+$/.test(s.fDomain)) { this.setState({ fError: 'Enter a valid custom domain, e.g. mms.acmeortho.com' }); return; }
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(admin)) { this.setState({ fError: 'Enter a valid space admin email.' }); return; }
+        const d = new Date();
+        const created = d.getDate() + ' ' + ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()] + ' ' + d.getFullYear();
+        const list = s.spaces.concat([{ name, slug: s.fSlug, admin, created, domain: s.fDomain || '', status: 'Active' }]); this.setState({ spaces: list, modal: false, section: 'spaces' }); if (typeof this.props.onSpacesChange === 'function') this.props.onSpacesChange(list);
+      }
+    };
+  }
+}
+</script>
+</body>
+</html>

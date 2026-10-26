@@ -1,0 +1,1214 @@
+// 3D Surgical Manufacturing Management — data model.
+//
+// The application is multi-tenant: a *company space* is an isolated workspace
+// for one company, and every business row carries the space it belongs to.
+// Platform administrators work in a separate admin console and never inside a
+// space.
+// Cases are mirrored one-way from that company's tenant on the 3D Surgical
+// platform and are read-only here; everything manufacturing-specific (parts,
+// stages, quality forms, equipment, stock) is owned by this application and
+// arrives in later phases — see docs/build-plan.md.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// Prisma 7 keeps the connection URL out of the schema — it lives in
+// prisma.config.ts for the CLI, and reaches the client through the pg adapter
+// in src/lib/db.ts.
+datasource db {
+  provider = "postgresql"
+}
+
+// ---------------------------------------------------------------------------
+// Tenancy
+// ---------------------------------------------------------------------------
+
+/// An isolated workspace for one company, reached at its own address:
+/// `<slug>.<BASE_DOMAIN>`, and optionally a domain of the company's own.
+model Space {
+  id   String @id @default(cuid())
+  name String
+  slug String @unique
+
+  /// A hostname the company points at this application (by CNAME), as an
+  /// alternative to the subdomain. Stored lowercase, without a scheme.
+  customDomain String? @unique
+
+  /// The space's first admin. They are given a local account when the space is
+  /// created, so somebody can sign in and connect the platform; and a platform
+  /// account with this address is always let in as an admin.
+  adminEmail String
+
+  /// False means suspended: nobody can sign in, and live sessions stop working.
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  createdById String?
+
+  connection   PlatformConnection?
+  users        User[]
+  roleMappings RoleMapping[]
+  cases        CaseRecord[]
+  auditEvents  AuditLog[]
+
+  @@map("spaces")
+}
+
+// ---------------------------------------------------------------------------
+// Access control
+// ---------------------------------------------------------------------------
+
+/// What a person may do inside their space. Super admins sit above this and
+/// are marked on the user instead, because they belong to no space.
+enum SpaceRole {
+  SPACE_ADMIN
+  MEMBER
+}
+
+/// Maps a platform role name (roles.name on the platform, e.g. "Admin") onto a
+/// role in one space. A platform role with no mapping, or one with
+/// canAccess = false, cannot sign in — the platform also holds surgeons and
+/// distributors, and none of them belong in a manufacturing system.
+model RoleMapping {
+  id      String @id @default(cuid())
+  spaceId String
+  space   Space  @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+
+  platformRoleName String
+  role             SpaceRole @default(MEMBER)
+  canAccess        Boolean   @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([spaceId, platformRoleName])
+  @@map("role_mappings")
+}
+
+model User {
+  id String @id @default(cuid())
+
+  /// Null for a super admin, who belongs to no space and may enter any.
+  spaceId String?
+  space   Space?  @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+
+  email     String
+  name      String
+  firstName String?
+  lastName  String?
+  phone     String?
+  avatarUrl String?
+
+  /// Platform administrators, who sign in at the admin console and belong to no
+  /// space.
+  isSuperAdmin Boolean @default(false)
+
+  /// A local password (scrypt). Every super admin has one, and so does the
+  /// admin a space is created with. Everyone else has none: they sign in with
+  /// their platform account, and the platform checks the password.
+  passwordHash String?
+
+  role SpaceRole @default(MEMBER)
+
+  // Identity mirrored from the platform on every sign-in.
+  platformUserId    Int?
+  platformSlug      String?
+  platformRoleName  String?
+  platformRoleGroup String?
+
+  twoFactorEnabled Boolean @default(false)
+  twoFactorType    String?
+
+  /// The person's handwritten signature, drawn or uploaded on My account, as
+  /// a stored image. Signing a form copies it onto that record, so changing it
+  /// later never alters what was signed.
+  signatureKey       String?
+  signatureType      String?
+  signatureUpdatedAt DateTime?
+
+  /// The hospitals this person works at (Hospitals list) — for a surgeon, the
+  /// hospitals a case form can offer once they are chosen.
+  hospitalIds String[] @default([])
+
+  /// The manufacturing sites this person works at (Manufacturing Sites list).
+  siteIds  String[] @default([])
+  /// Site-only access: sees and works on only the parts made at their sites —
+  /// no cases, no patient details, no setup. For a vendor's or partner's staff.
+  siteOnly Boolean  @default(false)
+  /// Surgeon access: their own cases' Order tab only.
+  surgeonOnly Boolean @default(false)
+
+  isActive    Boolean   @default(true)
+  lastLoginAt DateTime?
+  lastLoginIp String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  sessions          Session[]
+  auditEvents       AuditLog[] @relation("AuditActor")
+  syncRunsTriggered SyncRun[]  @relation("SyncTriggeredBy")
+
+  // Postgres treats NULLs as distinct, so this does not stop two super admins
+  // sharing an address; a partial unique index in the migration does.
+  @@unique([spaceId, email])
+  @@unique([spaceId, platformUserId])
+  @@index([spaceId, isActive])
+  @@map("users")
+}
+
+/// Server-side sessions. The cookie carries a random opaque token; only its
+/// keyed hash is stored, so a database leak does not yield usable sessions.
+/// Rows are kept (not deleted) on logout so revocation is auditable.
+model Session {
+  id        String @id @default(cuid())
+  tokenHash String @unique
+  userId    String
+  user      User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  /// The platform's Passport token for this session, encrypted at rest.
+  platformToken     String?
+  ip                String?
+  userAgent         String?
+  createdAt         DateTime  @default(now())
+  lastSeenAt        DateTime  @default(now())
+  /// Idle timeout — extended on activity, never past absoluteExpiresAt.
+  expiresAt         DateTime
+  /// Hard ceiling; a session can never outlive this regardless of activity.
+  absoluteExpiresAt DateTime
+  revokedAt         DateTime?
+  revokedReason     String?
+
+  @@index([userId, revokedAt])
+  @@index([expiresAt])
+  @@map("sessions")
+}
+
+/// Records every credential attempt so logins can be throttled per email and
+/// per IP, and so brute-force attempts are visible.
+model LoginAttempt {
+  id         String   @id @default(cuid())
+  email      String
+  ip         String
+  successful Boolean
+  reason     String?
+  createdAt  DateTime @default(now())
+
+  @@index([email, createdAt])
+  @@index([ip, createdAt])
+  @@map("login_attempts")
+}
+
+// ---------------------------------------------------------------------------
+// Platform connection + sync
+// ---------------------------------------------------------------------------
+
+/// The platform tenant one space pulls its cases from, and checks its users'
+/// credentials against.
+model PlatformConnection {
+  id      String @id @default(cuid())
+  spaceId String @unique
+  space   Space  @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+
+  /// e.g. https://jajal.3dsurgical.com
+  domainUrl String
+  /// e.g. https://jajal.3dsurgical.com/api
+  baseUrl   String
+
+  /// Service account used for syncing. Must be an Admin on the platform —
+  /// /api/cases is role-scoped, so any other account would silently pull a
+  /// partial dataset. The password is AES-256-GCM encrypted at rest.
+  serviceEmail             String?
+  servicePasswordEncrypted String?
+
+  /// The platform's tenant date format, used to parse case_created_on.
+  /// One of: dd-mm-yyyy, dd/mm/yyyy, mm/dd/yyyy, mm-dd-yyyy, yyyy-mm-dd.
+  dateFormat String @default("dd-mm-yyyy")
+  /// Field-mapping overrides: local field -> platform response key.
+  fieldMap   Json?
+  timezone   String @default("Asia/Kolkata")
+
+  verifiedAt   DateTime?
+  verifiedName String?
+
+  lastSyncAt     DateTime?
+  lastSyncStatus String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  syncRuns SyncRun[]
+
+  @@map("platform_connections")
+}
+
+enum SyncStatus {
+  RUNNING
+  SUCCESS
+  PARTIAL
+  FAILED
+}
+
+model SyncRun {
+  id           String             @id @default(cuid())
+  connectionId String
+  connection   PlatformConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+
+  status     SyncStatus @default(RUNNING)
+  trigger    String     @default("manual") // manual | schedule
+  startedAt  DateTime   @default(now())
+  finishedAt DateTime?
+
+  pagesFetched Int @default(0)
+  casesSeen    Int @default(0)
+  casesCreated Int @default(0)
+  casesUpdated Int @default(0)
+
+  errorMessage String?
+  /// Per-row warnings, for the sync report.
+  details      Json?
+
+  triggeredById String?
+  triggeredBy   User?   @relation("SyncTriggeredBy", fields: [triggeredById], references: [id], onDelete: SetNull)
+
+  @@index([connectionId, startedAt])
+  @@map("sync_runs")
+}
+
+// ---------------------------------------------------------------------------
+// Cases — mirrored from the platform, read-only here.
+// ---------------------------------------------------------------------------
+
+/// Which tile a case counts under. Derived from the platform's free-text status
+/// and state by src/lib/cases/classify.ts at sync time.
+enum CaseBucket {
+  NEW
+  ACTIVE
+  COMPLETED
+  ARCHIVED
+}
+
+model CaseRecord {
+  id      String @id @default(cuid())
+  spaceId String
+  space   Space  @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+
+  /// case_models.id on the platform. The stable sync key within a space;
+  /// null for a case created in the app (origin "local").
+  platformCaseId Int?
+  /// "platform" — synced from the 3D Surgical Platform; "local" — created in
+  /// this app from the space's case form (src/lib/cases/case-form.ts).
+  origin         String  @default("platform")
+  caseNumber     String?
+  /// `caseNumber` with its digits padded, so "E99" sorts before "E934"
+  /// (src/lib/cases/sort-key.ts).
+  caseNumberSort String?
+  caseCode       String?
+
+  productName String?
+  productCode String?
+  scopeName   String?
+
+  caseStatus String?
+  caseState  String?
+  isArchived Boolean    @default(false)
+  bucket     CaseBucket @default(ACTIVE)
+
+  surgeonName        String?
+  representativeName String?
+  /// Not in the platform's case list today; filled when the field map points
+  /// at a key that carries them.
+  hospitalName       String?
+  priority           String?
+
+  // --- Patient identifiers ---------------------------------------------------
+  // A device is made for one patient, so manufacturing records need to say
+  // whom. They are AES-256-GCM encrypted at rest, masked on screen by default,
+  // and every unmasking is written to the audit log.
+  patientNameEncrypted String?
+  patientAge           String?
+  patientGender        String?
+
+  surgeryDate         DateTime?
+  anticipatedShipDate DateTime?
+  platformCreatedAt   DateTime
+  /// When the case was marked completed — its end date; null while open.
+  completedAt         DateTime?
+  /// A case opened here: who owns it now, the stage it is at (its index in its
+  /// product's case stages) and, per stage, when it got there and who moved it.
+  assigneeId          String?
+  assigneeName        String?
+  stageIndex          Int?
+  stageMeta           Json?
+  /// The case's own picture (one of its case_files) — shown wherever the case is.
+  imageFileId         String?
+
+  // --- The platform's case edit page -----------------------------------------
+  // The API's case list is all the API has. Everything else the platform knows
+  // about a case — priority, scan type, the status table, documents — is read
+  // from its case edit page on demand (src/lib/platform/web.ts) and cached.
+
+  /// Path of this case's edit page on the platform, from the API's "Edit" link.
+  platformEditPath String?
+  /// The parsed page as JSON, AES-256-GCM encrypted: it includes the patient's
+  /// name, age or date of birth, and gender.
+  detailEncrypted  String?
+  detailFetchedAt  DateTime?
+
+  firstSeenAt  DateTime @default(now())
+  lastSyncedAt DateTime @default(now())
+  /// The platform payload with patient identifiers and bulky keys stripped,
+  /// retained so a mapping change can be replayed without a full re-fetch.
+  raw          Json?
+
+  // --- Created in the app --------------------------------------------------------
+  /// The product and sub-scope it was opened for (resources of those kinds).
+  productId          String?
+  subscopeId         String?
+  /// The patient ID the hospital gave, AES-256-GCM encrypted like the name.
+  patientIdEncrypted String?
+  /// The case form's answers, by variable: [{ label, var, value }].
+  details            Json?
+  /// The case form it was opened with (Case Form Setup); null — the default form.
+  caseFormId         String?
+  createdByName      String?
+
+  parts Part[]
+  /// The quality forms of its stages, and their signature and evidence files.
+  forms     PartForm[]
+  formFiles PartFile[]
+  /// When its stages' quality forms were created.
+  formsReadyAt DateTime?
+  /// When its Order tab was given its product's automatic order forms — once, so forms removed stay removed.
+  ordersReadyAt DateTime?
+  tasks Task[]
+  files CaseFile[]
+
+  @@unique([spaceId, platformCaseId])
+  @@index([spaceId, surgeryDate])
+  @@index([spaceId, caseStatus])
+  @@index([spaceId, bucket])
+  @@index([spaceId, caseNumberSort])
+  @@map("case_records")
+}
+
+// ---------------------------------------------------------------------------
+// Audit
+// ---------------------------------------------------------------------------
+
+/// Append-only record of who did what. Null spaceId means a platform-level
+/// event (a super admin signing in, a space being created).
+model AuditLog {
+  id      String  @id @default(cuid())
+  spaceId String?
+  space   Space?  @relation(fields: [spaceId], references: [id], onDelete: SetNull)
+
+  actorId    String?
+  actor      User?   @relation("AuditActor", fields: [actorId], references: [id], onDelete: SetNull)
+  /// Denormalised so the trail survives the actor being removed.
+  actorEmail String?
+
+  action     String // e.g. case.patient_reveal
+  entityType String
+  entityId   String?
+  /// The record's name at the time, so the trail still reads after a rename
+  /// or a permanent deletion.
+  entityName String?
+  summary    String?
+  before     Json?
+  after      Json?
+
+  ip        String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  @@index([spaceId, createdAt])
+  @@index([entityType, entityId])
+  @@index([actorId, createdAt])
+  @@map("audit_logs")
+}
+
+// ---------------------------------------------------------------------------
+// Manufacturing setup — master data. Everything parts and quality forms will
+// point at: workflows, machines, materials, suppliers and the equipment
+// registries.
+// ---------------------------------------------------------------------------
+
+/// A fabrication process ("3D Printing", "CNC Machining"). Groups workflows,
+/// machines and materials.
+model Technology {
+  id      String @id @default(cuid())
+  spaceId String
+  name    String
+
+  createdAt DateTime @default(now())
+
+  @@unique([spaceId, name])
+  @@map("technologies")
+}
+
+/// A category of deliverable, chosen when a part is requested. `code` feeds the
+/// part-ID rule.
+model PartType {
+  id      String @id @default(cuid())
+  spaceId String
+  name    String
+  code    String
+
+  createdAt DateTime @default(now())
+
+  @@unique([spaceId, name])
+  @@map("part_types")
+}
+
+/// One record of master data: a workflow, a machine, a material, a supplier, or
+/// an entry in one of the nine equipment registries.
+///
+/// They share a table because they share everything that matters — a list, a
+/// detail page, schedules of things that fall due, records of those being
+/// done, documents, and an archive with two-person deletion — and differ only
+/// in which fields they carry. The fields live in `data`, described per kind in
+/// src/lib/resources/config.ts, exactly as the design drives its registries
+/// from one configuration.
+model Resource {
+  id      String @id @default(cuid())
+  spaceId String
+
+  /// workflows | printers | materials | vendors | measuring | postproc | steril
+  /// | components | tooling | software | params | operators | packaging
+  kind   String
+  name   String
+  /// The status a person set. What is *shown* can be worse — "Calibration
+  /// overdue" — and is worked out from the schedule (src/lib/resources/status.ts).
+  status String @default("")
+  /// The kind's own fields, plus a workflow's stages.
+  data   Json
+
+  /// The photo, when the kind has one: a ResourceDocument of kind "Photo".
+  imageId String?
+
+  // --- Archive ---------------------------------------------------------------
+  // Archiving hides a record from lists and pickers and keeps everything. It
+  // is the normal way to retire something; deletion is the exception below.
+  archivedAt     DateTime?
+  archivedById   String?
+  archivedByName String?
+  archiveReason  String?
+
+  // --- Permanent deletion ------------------------------------------------------
+  // Requested by one person and approved by another; never one person alone.
+  deletionRequestedAt     DateTime?
+  deletionRequestedById   String?
+  deletionRequestedByName String?
+  deletionReason          String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  scheduleItems ScheduleItem[]
+  records       ScheduleRecord[]
+  documents     ResourceDocument[]
+  lots          MaterialLot[]
+
+  @@index([spaceId, kind, archivedAt])
+  @@map("resources")
+}
+
+/// Something that falls due: a preventive maintenance, a calibration, a
+/// qualification, a supplier evaluation. Recording it moves the due date on.
+model ScheduleItem {
+  id         String   @id @default(cuid())
+  resourceId String
+  resource   Resource @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+
+  /// maintenance | qualification — which tab it belongs to.
+  track String
+  name  String
+
+  dueOn        DateTime? @db.Date
+  /// Null for a one-time item.
+  repeatMonths Int?
+  lastDoneOn   DateTime? @db.Date
+  /// Pass | Pass with remarks | Fail — qualification items only.
+  lastResult   String?
+
+  createdAt DateTime @default(now())
+
+  records ScheduleRecord[]
+
+  @@index([resourceId, track])
+  @@map("schedule_items")
+}
+
+/// One occasion on which a schedule item was done. Records are kept for good:
+/// removing the item keeps its records, with the item's name copied here.
+model ScheduleRecord {
+  id         String        @id @default(cuid())
+  resourceId String
+  resource   Resource      @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+  itemId     String?
+  item       ScheduleItem? @relation(fields: [itemId], references: [id], onDelete: SetNull)
+
+  track    String
+  itemName String
+
+  doneOn DateTime @db.Date
+  /// As written — "Ravi Patel", or a service provider's name. The signed-in
+  /// person who saved the record is kept separately, below.
+  doneBy String
+  result String?
+  ref    String?
+  note   String?
+
+  // --- Change control ----------------------------------------------------------
+  // Maintenance that may have disturbed a validated state opens a review on the
+  // Qualification tab, which stays open until somebody closes it.
+  affectsValidation Boolean   @default(false)
+  reviewOutcome     String?
+  reviewedByName    String?
+  reviewedAt        DateTime?
+
+  recordedById   String?
+  recordedByName String?
+  createdAt      DateTime @default(now())
+
+  documents ResourceDocument[]
+
+  @@index([resourceId, track, doneOn])
+  @@map("schedule_records")
+}
+
+/// A file attached to a resource: a manual, an SOP, a report — or the evidence
+/// for one record. The bytes live in the file store (src/lib/files.ts).
+model ResourceDocument {
+  id         String          @id @default(cuid())
+  spaceId    String
+  resourceId String
+  resource   Resource        @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+  recordId   String?
+  record     ScheduleRecord? @relation(fields: [recordId], references: [id], onDelete: SetNull)
+
+  name        String
+  kind        String
+  contentType String
+  size        Int
+  storageKey  String
+
+  uploadedById   String?
+  uploadedByName String?
+  createdAt      DateTime @default(now())
+
+  @@index([resourceId])
+  @@map("resource_documents")
+}
+
+/// One incoming batch of a material, with its certificate and how much is left.
+/// A lot of stock — of a material, a standard component or a packaging item.
+/// Every quantity in stock is a lot: received on a GRN, or entered once as
+/// opening stock when the space started.
+model MaterialLot {
+  id         String   @id @default(cuid())
+  resourceId String
+  resource   Resource @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+
+  lotNumber   String
+  supplierLot String?
+  remaining   Decimal   @db.Decimal(12, 3)
+  received    Decimal   @db.Decimal(12, 3)
+  receivedOn  DateTime? @db.Date
+  supplier    String?
+  coa         String?
+  expiresOn   DateTime? @db.Date
+
+  createdAt DateTime @default(now())
+
+  adjustments LotAdjustment[]
+
+  // --- Goods receipt ------------------------------------------------------------
+  // A lot received through a GRN points back at it; one entered by hand does not.
+  grnId      String?
+  grnNumber  String?
+  /// The supplier record it came from; `supplier` keeps the name as it was.
+  supplierId String?
+  /// What incoming inspection turned away from this delivery.
+  rejected   Decimal? @db.Decimal(12, 3)
+
+  @@index([resourceId])
+  @@index([supplierId])
+  @@map("material_lots")
+}
+
+/// A manual correction to a lot's stock — a spill, scrap, a stock count — with
+/// the reason. Stock never changes without one of these or a receipt.
+model LotAdjustment {
+  id    String      @id @default(cuid())
+  lotId String
+  lot   MaterialLot @relation(fields: [lotId], references: [id], onDelete: Cascade)
+
+  quantity Decimal @db.Decimal(12, 3)
+  reason   String
+  byId     String?
+  byName   String
+
+  createdAt DateTime @default(now())
+
+  @@map("lot_adjustments")
+}
+
+// ---------------------------------------------------------------------------
+// Parts — what is actually manufactured for a case.
+// ---------------------------------------------------------------------------
+
+/// How a space requests parts: the part-ID rule, and the form people fill in.
+/// One row per space; when there is none, the defaults in
+/// src/lib/parts/request-form.ts apply.
+model PartRequestSetup {
+  spaceId String @id
+
+  idPrefix    String   @default("JM")
+  idSeparator String   @default("-")
+  /// Ordered token codes, e.g. PRODUCT, CASE_SEQ, PART_SEQ.
+  idTokens    String[]
+  /// What the part sequence counts within: case, case-type, type, month, year, space or auto (src/lib/parts/numbering.ts).
+  idScope     String   @default("case")
+  /// Digits of the part sequence.
+  idWidth     Int      @default(2)
+
+  /// The request form: sections of fields.
+  sections Json
+
+  updatedAt     DateTime @updatedAt
+  updatedByName String?
+
+  @@map("part_request_setups")
+}
+
+/// One request form of a space: the fields asked when a part is requested.
+/// A space can keep several — one per kind of part — and they share the
+/// part-ID rule above. A form that parts were requested with is archived
+/// rather than deleted, so those parts still show what was asked.
+model PartRequestForm {
+  id      String @id @default(cuid())
+  spaceId String
+
+  name        String
+  description String  @default("")
+  sections    Json
+  isDefault   Boolean @default(false)
+  position    Int     @default(0)
+
+  archivedAt    DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  updatedByName String?
+
+  @@index([spaceId])
+  @@map("part_request_forms")
+}
+
+model Part {
+  id      String @id @default(cuid())
+  spaceId String
+
+  /// The case the part is made for. Null for a part that belongs to no case:
+  /// a stock item, a test coupon, a demonstration model.
+  caseId String?
+  case   CaseRecord? @relation(fields: [caseId], references: [id], onDelete: Cascade)
+
+  /// The human part ID, generated from the space's rule: JM-CRANIO-0430-01.
+  partNumber String
+  /// This part's number within its case, starting at 1 — or, for a part
+  /// without a case, its number among the space's other such parts.
+  sequence   Int
+
+  name     String
+  quantity Int       @default(1)
+  dueOn    DateTime? @db.Date
+  partType String?
+  priority String?
+  notes    String?
+
+  /// The request form it was requested with, and its name then.
+  requestFormId   String?
+  requestFormName String?
+
+  // --- Production ---------------------------------------------------------------
+  workflowId   String?
+  workflowName String
+  /// The workflow's stages as they were when the part was requested. A part
+  /// keeps the route it started on: editing a workflow afterwards changes new
+  /// parts, not ones already in production.
+  stages       Json
+  /// How many stages there are, so lists can tell "on its last stage" in SQL.
+  stageCount   Int
+  stageIndex   Int     @default(0)
+  /// Per stage, in step with `stages`: owner, due date, who completed it, when.
+  stageMeta    Json
+  technology   String?
+  material     String?
+  printer      String?
+  sourcing     String  @default("In-house")
+  vendor       String?
+  /// Where it is made: a record of the Manufacturing Sites list, and its name then.
+  siteId       String?
+  siteName     String?
+
+  assigneeId   String?
+  assigneeName String?
+
+  /// Answers to the request form's other fields: [{ label, var, value }].
+  details    Json
+  /// Drawing balloons: { images, points, columns, rows }.
+  inspection Json?
+  /// Download links given instead of, or as well as, uploaded files.
+  links      String[]
+
+  requestedById   String?
+  requestedByName String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  files    PartFile[]
+  activity PartActivity[]
+  tasks    Task[]
+  forms    PartForm[]
+
+  /// When the part's quality forms were created from the QA templates. Parts
+  /// requested before any template existed get theirs the first time they are
+  /// opened; null until then.
+  formsReadyAt DateTime?
+
+  @@unique([spaceId, partNumber])
+  @@index([spaceId, stageIndex])
+  @@index([caseId])
+  @@map("parts")
+}
+
+/// A file uploaded with a case created in the app: DICOM, reports, photos.
+model CaseFile {
+  id      String     @id @default(cuid())
+  spaceId String
+  caseId  String
+  case    CaseRecord @relation(fields: [caseId], references: [id], onDelete: Cascade)
+
+  /// The case-form field it answers, e.g. dicom.
+  field       String?
+  name        String
+  contentType String
+  size        Int
+  storageKey  String
+
+  uploadedByName String?
+  createdAt      DateTime @default(now())
+
+  @@index([caseId])
+  @@map("case_files")
+}
+
+/// A file attached to a part: a print file, the product image, a drawing.
+model PartFile {
+  id      String @id @default(cuid())
+  spaceId String
+  /// The part — or, for a signature or evidence on a case's form, the case.
+  partId  String?
+  part    Part?  @relation(fields: [partId], references: [id], onDelete: Cascade)
+  caseId  String?
+  case    CaseRecord? @relation(fields: [caseId], references: [id], onDelete: Cascade)
+
+  /// print | image | drawing
+  kind        String
+  /// The request-form variable the file answers, e.g. productImage.
+  field       String?
+  name        String
+  contentType String
+  size        Int
+  storageKey  String
+  /// A request image: how large it is shown — S, M, L or XL; null = M.
+  displaySize String?
+
+  uploadedByName String?
+  createdAt      DateTime @default(now())
+
+  @@index([partId])
+  @@map("part_files")
+}
+
+/// A part's own log: every action on it, with who and when.
+model PartActivity {
+  id     String @id @default(cuid())
+  partId String
+  part   Part   @relation(fields: [partId], references: [id], onDelete: Cascade)
+
+  title  String
+  detail String?
+  byId   String?
+  byName String
+
+  createdAt DateTime @default(now())
+
+  @@index([partId, createdAt])
+  @@map("part_activity")
+}
+
+/// Something to be done. "Default" tasks are created by a workflow stage when a
+/// part is requested; "Manual" ones are assigned by a person.
+model Task {
+  id      String @id @default(cuid())
+  spaceId String
+
+  name String
+  /// Manual | Default
+  type String @default("Manual")
+
+  caseId     String?
+  case       CaseRecord? @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  partId     String?
+  part       Part?       @relation(fields: [partId], references: [id], onDelete: Cascade)
+  /// The part stage a default task belongs to.
+  stageIndex Int?
+
+  /// Open | In progress | Done
+  status       String    @default("Open")
+  assigneeId   String?
+  assigneeName String?
+  /// Low | Medium | High | Critical
+  priority     String    @default("Medium")
+  dueOn        DateTime? @db.Date
+  /// Days before the due date; 0 = on the day.
+  reminders    Int[]
+  tags         String[]
+  /// [{ id, text, done }]
+  checklist    Json
+
+  completedByName String?
+  completedAt     DateTime?
+
+  createdById   String?
+  createdByName String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([spaceId, type, status])
+  @@index([partId])
+  @@map("tasks")
+}
+
+// ---------------------------------------------------------------------------
+// Settings a space configures on a setup page, by key: "qa", "grn".
+// ---------------------------------------------------------------------------
+
+model SpaceSetting {
+  spaceId String
+  key     String
+  value   Json
+
+  updatedAt     DateTime @updatedAt
+  updatedByName String?
+
+  @@id([spaceId, key])
+  @@map("space_settings")
+}
+
+// ---------------------------------------------------------------------------
+// Quality forms
+// ---------------------------------------------------------------------------
+
+/// A QA form as designed in QA Form Setup: sections of items, some filled in
+/// from the part, case and request, some by the operator.
+model QaTemplate {
+  id      String @id @default(cuid())
+  spaceId String
+
+  name      String
+  /// Document code, e.g. QMS-FI-03.
+  code      String
+  clause    String   @default("")
+  issue     String   @default("")
+  effective String   @default("")
+  rev       String   @default("")
+  /// Valid until — a controlled form's validity date, shown in its header.
+  validity  String   @default("")
+  /// The document header: "reference" (reference standards) or "banner" (effective · validity · form · ver).
+  docStyle  String   @default("reference")
+  /// What it is filled for: "product" (a case's stages), "manufacturing" (a part's workflow), or "generic" (either).
+  usedFor   String   @default("generic")
+  /// Print the controlled-document header (document no., issue, rev, date).
+  docLayout Boolean  @default(false)
+  /// Workflow stage names this form is added to a part at.
+  attach    String[]
+  sections  Json
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  updatedByName String?
+
+  partForms PartForm[]
+
+  @@index([spaceId])
+  @@map("qa_templates")
+}
+
+/// One quality record on one part, at one of its stages.
+///
+/// The template's content is copied here when the form is created, so a
+/// record — once approved above all — reads the same however the template is
+/// edited later.
+model PartForm {
+  id      String @id @default(cuid())
+  spaceId String
+  /// The part it is filled for — or, for a case stage's form, none and the case below.
+  partId  String?
+  part    Part?  @relation(fields: [partId], references: [id], onDelete: Cascade)
+  caseId  String?
+  case    CaseRecord? @relation(fields: [caseId], references: [id], onDelete: Cascade)
+
+  templateId String?
+  template   QaTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+
+  stageIndex Int
+  stageName  String
+  /// "stage": a case status's or part stage's form; "order": a case's Order tab form (stageIndex -1).
+  area       String @default("stage")
+  /// An order form taken off after it was filled: kept, with why.
+  withdrawnAt     DateTime?
+  withdrawnByName String?
+  withdrawnReason String?
+
+  name      String
+  code      String
+  clause    String
+  issue     String
+  effective String
+  rev       String
+  validity  String   @default("")
+  docStyle  String   @default("reference")
+  docLayout Boolean
+  sections  Json
+
+  /// Upcoming | In progress | Pending approval | Approved
+  status       String  @default("Upcoming")
+  assigneeId   String?
+  assigneeName String?
+
+  /// What was entered, by item id; balloon measurements by row id; quantities
+  /// used by item id; and, per library pick, what the item was at the time.
+  values     Json
+  measured   Json
+  quantities Json
+  snap       Json
+  outOfSpec  Int  @default(0)
+
+  savedById       String?
+  savedByName     String?
+  savedAt         DateTime?
+  submittedById   String?
+  submittedByName String?
+  submittedAt     DateTime?
+  /// The one person it was sent to for approval — only they may approve it.
+  sentToId        String?
+  sentToName      String?
+  approvedById    String?
+  approvedByName  String?
+  approvedAt      DateTime?
+  /// The record's version: 1, and one more each time an approved record is revised.
+  version         Int       @default(1)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  uses     FormUse[]
+  versions PartFormVersion[]
+
+  @@index([partId])
+  @@index([caseId])
+  @@index([spaceId, status])
+  @@index([sentToId, status])
+  @@map("part_forms")
+}
+
+/// A quality form as it stood when it was approved or rejected — kept, never
+/// changed, so the versions can be read and compared later.
+model PartFormVersion {
+  id      String   @id @default(cuid())
+  spaceId String
+  formId  String
+  form    PartForm @relation(fields: [formId], references: [id], onDelete: Cascade)
+
+  version Int
+  /// approved | rejected
+  event   String
+  /// Why it was rejected.
+  reason  String?
+  byId    String?
+  byName  String
+
+  sections        Json
+  values          Json
+  measured        Json
+  quantities      Json
+  snap            Json
+  outOfSpec       Int       @default(0)
+  submittedByName String?
+  submittedAt     DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@index([formId, createdAt])
+  @@map("part_form_versions")
+}
+
+/// Traceability: a library item — a machine, a lot, an operator, a parameter
+/// set — picked in a part's quality form. Rewritten each time the form is
+/// saved; shown on the part and on the item's Usage records tab.
+model FormUse {
+  id      String   @id @default(cuid())
+  spaceId String
+  formId  String
+  form    PartForm @relation(fields: [formId], references: [id], onDelete: Cascade)
+  /// The part it was used on; none for a case's form (the form says which case).
+  partId  String?
+
+  /// printers | lots | operators | … — the dropdown's library.
+  source   String
+  /// The record picked: a Resource id, a MaterialLot id. Null for a custom list.
+  itemId   String?
+  label    String
+  quantity Decimal? @db.Decimal(12, 3)
+  unit     String?
+  /// The form item's label.
+  field    String
+
+  createdAt DateTime @default(now())
+
+  @@index([spaceId, source, itemId])
+  @@index([formId])
+  @@map("form_uses")
+}
+
+// ---------------------------------------------------------------------------
+// Goods receipt
+// ---------------------------------------------------------------------------
+
+/// A goods receipt note: one delivery, received, then inspected line by line
+/// and accepted into stock.
+model Grn {
+  id      String @id @default(cuid())
+  spaceId String
+
+  number       String
+  receivedOn   DateTime @db.Date
+  supplierId   String?
+  supplierName String?
+  /// The receipt fields from GRN setup: PO no., delivery note no. and so on.
+  header       Json
+
+  /// False while it is a draft: nothing has entered the system yet.
+  received        Boolean   @default(false)
+  receivedAt      DateTime?
+  confirmedByName String?
+
+  createdById   String?
+  createdByName String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  lines     GrnLine[]
+  documents GrnDocument[]
+  log       GrnLog[]
+
+  @@unique([spaceId, number])
+  @@index([spaceId, received])
+  @@map("grns")
+}
+
+/// One thing that arrived: a material lot, components, packaging, returned
+/// parts, a calibrated instrument, equipment, or anything else.
+model GrnLine {
+  id       String @id @default(cuid())
+  spaceId  String
+  grnId    String
+  grn      Grn    @relation(fields: [grnId], references: [id], onDelete: Cascade)
+  position Int
+
+  /// material | component | packaging | part | calibration | equipment | other
+  type String
+
+  itemId        String?
+  itemName      String?
+  /// new | existing — a new lot, or a top-up of one already in stock.
+  lotMode       String    @default("new")
+  lotNumber     String?
+  existingLotId String?
+  supplierBatch String?
+  quantity      Decimal?  @db.Decimal(12, 3)
+  unit          String?
+  expiresOn     DateTime? @db.Date
+  coa           String?
+
+  partIds String[]
+  ref     String?
+
+  calItemId String?
+  cert      String?
+  calDate   DateTime? @db.Date
+
+  category      String?
+  equipmentMode String?
+  newName       String?
+  newAsset      String?
+
+  description String?
+  extra       Json
+
+  /// Acceptance tests: { [testId]: { n, res: ["Pass" | "Fail" | ""] } }.
+  tests           Json
+  rejectedQty     Decimal?  @db.Decimal(12, 3)
+  /// Accepted | Rejected | Quarantine — null until inspected.
+  decision        String?
+  reason          String?
+  inspectedById   String?
+  inspectedByName String?
+  inspectedAt     DateTime?
+  testSummary     String?
+  /// What accepting it made or changed: the lot, the new equipment record.
+  resultId        String?
+
+  createdAt DateTime @default(now())
+
+  @@index([grnId])
+  @@index([spaceId, type])
+  @@map("grn_lines")
+}
+
+model GrnDocument {
+  id      String @id @default(cuid())
+  spaceId String
+  grnId   String
+  grn     Grn    @relation(fields: [grnId], references: [id], onDelete: Cascade)
+
+  kind           String
+  name           String
+  contentType    String
+  size           Int
+  storageKey     String
+  uploadedByName String?
+  createdAt      DateTime @default(now())
+
+  @@index([grnId])
+  @@map("grn_documents")
+}
+
+/// A receipt's own history: received, each line's decision, documents.
+model GrnLog {
+  id     String @id @default(cuid())
+  grnId  String
+  grn    Grn    @relation(fields: [grnId], references: [id], onDelete: Cascade)
+  text   String
+  byName String
+
+  createdAt DateTime @default(now())
+
+  @@index([grnId, createdAt])
+  @@map("grn_log")
+}
