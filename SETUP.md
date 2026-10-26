@@ -28,8 +28,8 @@ git --version
 ## 2. Get the code
 
 ```bash
-git clone <repository-url> "3dsurgical-print-lab-CMS"
-cd "3dsurgical-print-lab-CMS"
+git clone https://github.com/jayprajapati3DS/3DPrintLab_CaseManagment.git
+cd 3DPrintLab_CaseManagment
 ```
 
 ## 3. Install dependencies
